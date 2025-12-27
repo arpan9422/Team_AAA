@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react';
 import { z } from 'zod';
+import api from '@/lib/api';
 
 const emailSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -33,22 +34,23 @@ export default function ForgotPassword() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [apiError, setApiError] = useState('');
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setApiError('');
 
     try {
       emailSchema.parse({ email });
       setIsLoading(true);
       setMessage('');
 
-      // Simulate API call to send OTP
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await api.post('/auth/forgot-password', { email });
 
       setMessage('OTP sent to your email address');
       setStep('otp');
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.issues.forEach((err) => {
@@ -56,6 +58,8 @@ export default function ForgotPassword() {
           newErrors[path] = err.message;
         });
         setErrors(newErrors);
+      } else {
+        setApiError(error.response?.data?.error || 'Failed to send OTP. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -65,18 +69,18 @@ export default function ForgotPassword() {
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setApiError('');
 
     try {
       otpSchema.parse({ otp });
       setIsLoading(true);
       setMessage('');
 
-      // Simulate API call to verify OTP
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await api.post('/auth/verify-otp', { email, otp });
 
       setMessage('OTP verified successfully');
       setStep('reset');
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.issues.forEach((err) => {
@@ -84,6 +88,8 @@ export default function ForgotPassword() {
           newErrors[path] = err.message;
         });
         setErrors(newErrors);
+      } else {
+        setApiError(error.response?.data?.error || 'Invalid OTP. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -93,21 +99,21 @@ export default function ForgotPassword() {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setApiError('');
 
     try {
       resetPasswordSchema.parse({ password, confirmPassword });
       setIsLoading(true);
       setMessage('');
 
-      // Simulate API call to reset password
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await api.post('/auth/reset-password', { email, otp, newPassword: password });
 
       setMessage('Password reset successfully!');
       // Redirect to login after a delay
       setTimeout(() => {
         window.location.href = '/login';
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.issues.forEach((err) => {
@@ -115,6 +121,8 @@ export default function ForgotPassword() {
           newErrors[path] = err.message;
         });
         setErrors(newErrors);
+      } else {
+        setApiError(error.response?.data?.error || 'Failed to reset password. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -124,12 +132,16 @@ export default function ForgotPassword() {
   const handleResendOtp = async () => {
     setIsLoading(true);
     setMessage('');
+    setApiError('');
 
-    // Simulate API call to resend OTP
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    setMessage('OTP resent to your email address');
-    setIsLoading(false);
+    try {
+      await api.post('/auth/forgot-password', { email });
+      setMessage('OTP resent to your email address');
+    } catch (error: any) {
+      setApiError(error.response?.data?.error || 'Failed to resend OTP.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -140,6 +152,12 @@ export default function ForgotPassword() {
           {step === 'otp' && 'Enter OTP'}
           {step === 'reset' && 'Reset Password'}
         </h1>
+
+        {apiError && (
+          <div className="mb-4 p-3 rounded bg-red-100 border border-red-400 text-red-700 text-sm text-center">
+            {apiError}
+          </div>
+        )}
 
         {step === 'email' && (
           <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -253,7 +271,7 @@ export default function ForgotPassword() {
         )}
 
         {message && (
-          <p className="mt-4 text-center text-sm" style={{ color: step === 'reset' ? 'green' : 'var(--accent-cyan)' }}>
+          <p className="mt-4 text-center text-sm" style={{ color: step === 'reset' || message.includes('success') ? 'green' : 'var(--accent-cyan)' }}>
             {message}
           </p>
         )}
