@@ -11,6 +11,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import technicianRoutes from './modules/technician/technician.routes';
 import employeeRoutes from './modules/employee/employee.routes';
 import kanbanRoutes from './modules/kanban/kanban.routes';
+import workCenterRoutes from './modules/work-center/work-center.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/technician', technicianRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/kanban', kanbanRoutes);
+app.use('/api/work-center', workCenterRoutes);
 
 app.use(errorHandler);
 
