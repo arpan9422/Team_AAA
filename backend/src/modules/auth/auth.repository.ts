@@ -43,6 +43,13 @@ export class AuthRepository {
   }
 
   async deleteRefreshToken(token: string) {
-    return prisma.refreshToken.delete({ where: { token } });
+    try {
+      return await prisma.refreshToken.delete({ where: { token } });
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
   }
 }
