@@ -1,80 +1,157 @@
-# GearGuard - Maintenance Management System
+# Team AAA - GearGuard Maintenance Management System# GearGuard - Maintenance Management System
 
-## Setup Instructions
 
-### 1. Start PostgreSQL with Docker
 
-```bash
-docker-compose up -d
-```
+## Project Structure## Setup Instructions
 
-### 2. Generate Prisma Client
 
-```bash
-npm run prisma:generate
-```
 
-### 3. Run Database Migration
+```### 1. Start PostgreSQL with Docker
 
-```bash
+Team_AAA/
+
+├── backend/              # Backend API (Node.js + TypeScript + Prisma)```bash
+
+│   ├── src/docker-compose up -d
+
+│   │   ├── modules/      # Feature modules```
+
+│   │   ├── shared/       # Shared utilities
+
+│   │   ├── config/       # Configuration### 2. Generate Prisma Client
+
+│   │   └── server.ts     # Express app
+
+│   ├── prisma/           # Database schema & migrations```bash
+
+│   ├── package.jsonnpm run prisma:generate
+
+│   ├── tsconfig.json```
+
+│   └── docker-compose.yml
+
+└── README.md             # This file### 3. Run Database Migration
+
+
+
+``````bash
+
 npm run prisma:migrate
+
+## Quick Start```
+
+
+
+### Backend Setup### 4. Start Development Server
+
+
+
+```bash```bash
+
+cd backendnpm run dev
+
 ```
 
-### 4. Start Development Server
+# Install dependencies
 
-```bash
-npm run dev
-```
+npm installThe server will run on `http://localhost:3000`
 
-The server will run on `http://localhost:3000`
 
-## API Endpoints
+
+# Start PostgreSQL with Docker## API Endpoints
+
+docker-compose up -d
 
 ### Authentication Routes
 
-#### 1. Register User
-```
-POST /api/auth/register
-```
-**Body:**
-```json
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "role": "EMPLOYEE"
-}
-```
-**Roles:** `EMPLOYEE`, `TECHNICIAN`, `MANAGER`
+# Run database migrations
 
-#### 2. Login
+npm run prisma:migrate#### 1. Register User
+
 ```
-POST /api/auth/login
-```
-**Body:**
+
+# Start development serverPOST /api/auth/register
+
+npm run dev```
+
+```**Body:**
+
 ```json
-{
+
+The API will be available at `http://localhost:3000`{
+
+  "name": "John Doe",
+
+## Features  "email": "john@example.com",
+
+  "password": "password123",
+
+✅ Role-based authentication (Employee, Technician, Manager)  "role": "EMPLOYEE"
+
+✅ JWT-based access & refresh tokens}
+
+✅ Modular architecture```
+
+✅ TypeScript support**Roles:** `EMPLOYEE`, `TECHNICIAN`, `MANAGER`
+
+✅ PostgreSQL database with Prisma ORM
+
+✅ Docker containerization#### 2. Login
+
+```
+
+## DocumentationPOST /api/auth/login
+
+```
+
+- [Backend README](./backend/README.md) - API endpoints and setup**Body:**
+
+- [Architecture Guide](./backend/ARCHITECTURE.md) - Code structure and patterns```json
+
+- [Project Structure](./backend/PROJECT_STRUCTURE.md) - Detailed file organization{
+
   "email": "john@example.com",
-  "password": "password123"
+
+## Tech Stack  "password": "password123"
+
 }
-```
-**Response:**
-```json
-{
-  "message": "Login successful",
-  "accessToken": "jwt-token",
-  "refreshToken": "refresh-token",
-  "user": {
-    "id": "uuid",
+
+### Backend```
+
+- **Runtime**: Node.js**Response:**
+
+- **Language**: TypeScript```json
+
+- **Framework**: Express.js{
+
+- **Database**: PostgreSQL  "message": "Login successful",
+
+- **ORM**: Prisma  "accessToken": "jwt-token",
+
+- **Authentication**: JWT (jsonwebtoken)  "refreshToken": "refresh-token",
+
+- **Validation**: Zod  "user": {
+
+- **Password Hashing**: bcrypt    "id": "uuid",
+
     "name": "John Doe",
-    "email": "john@example.com",
+
+## Team Information    "email": "john@example.com",
+
     "role": "EMPLOYEE"
-  }
-}
+
+**Team Name**: Team AAA    }
+
+**Project**: GearGuard - AI-Powered Maintenance Management System}
+
 ```
+
+## License
 
 #### 3. Refresh Token
-```
+
+MIT```
+
 POST /api/auth/refresh
 ```
 **Body:**
