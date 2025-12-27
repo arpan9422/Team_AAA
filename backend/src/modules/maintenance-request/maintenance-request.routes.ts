@@ -137,6 +137,46 @@ router.get('/', authenticate, requestController.getAllRequests);
  */
 router.get('/statistics', authenticate, requestController.getStatistics);
 
+// TECHNICIAN-SPECIFIC ROUTES (must be before /:id)
+
+/**
+ * @swagger
+ * /api/requests/my-requests:
+ *   get:
+ *     summary: Get all requests for my team (Technician only)
+ *     tags: [Technician]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [NEW, IN_PROGRESS, REPAIRED, SCRAP, ESCALATED]
+ *     responses:
+ *       200:
+ *         description: List of requests for technician's team
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-requests', authenticate, requestController.getMyRequests);
+
+/**
+ * @swagger
+ * /api/requests/my-history:
+ *   get:
+ *     summary: Get my work history (Technician only)
+ *     tags: [Technician]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of completed requests
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-history', authenticate, requestController.getMyWorkHistory);
+
 /**
  * @swagger
  * /api/requests/{id}:
@@ -584,5 +624,184 @@ router.get('/team/:teamId', authenticate, requestController.getTeamRequests);
  *         description: Unauthorized
  */
 router.get('/team/:teamId/technicians', authenticate, requestController.getTeamTechnicians);
+
+// Additional technician routes with dynamic parameters
+
+/**
+ * @swagger
+ * /api/requests/{id}/start:
+ *   patch:
+ *     summary: Start working on a request (Technician only)
+ *     tags: [Technician]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Request started successfully
+ *       400:
+ *         description: Request cannot be started
+ *       401:
+ *         description: Unauthorized
+ */
+router.patch('/:id/start', authenticate, requestController.startRequest);
+
+/**
+ * @swagger
+ * /api/requests/{id}/update-progress:
+ *   patch:
+ *     summary: Update work progress on a request (Technician only)
+ *     tags: [Technician]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               workNotes:
+ *                 type: string
+ *               pauseWork:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Progress updated successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.patch('/:id/update-progress', authenticate, requestController.updateProgress);
+
+/**
+ * @swagger
+ * /api/requests/{id}/complete:
+ *   patch:
+ *     summary: Complete a maintenance request (Technician only)
+ *     tags: [Technician]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - hoursSpent
+ *               - rootCause
+ *             properties:
+ *               hoursSpent:
+ *                 type: number
+ *                 example: 2.5
+ *               rootCause:
+ *                 type: string
+ *                 enum: [WEAR_AND_TEAR, ELECTRICAL_FAULT, MECHANICAL_FAILURE, OPERATOR_ERROR, EXTERNAL_DAMAGE, SOFTWARE_ISSUE, OTHER]
+ *               isTemporaryFix:
+ *                 type: boolean
+ *                 default: false
+ *               workNotes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Request completed successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+router.patch('/:id/complete', authenticate, requestController.completeRequest);
+
+/**
+ * @swagger
+ * /api/requests/{id}/mark-unrepairable:
+ *   patch:
+ *     summary: Mark equipment as unrepairable (Technician only)
+ *     tags: [Technician]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Equipment marked as unrepairable
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+router.patch('/:id/mark-unrepairable', authenticate, requestController.markUnrepairable);
+
+/**
+ * @swagger
+ * /api/requests/{id}/escalate:
+ *   patch:
+ *     summary: Escalate request to manager (Technician only)
+ *     tags: [Technician]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Request escalated successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+router.patch('/:id/escalate', authenticate, requestController.escalateRequest);
 
 export default router;

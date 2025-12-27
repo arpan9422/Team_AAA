@@ -173,4 +173,106 @@ export class MaintenanceRequestController {
       next(error);
     }
   };
+
+  // TECHNICIAN-SPECIFIC ENDPOINTS
+
+  getMyRequests = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { status } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status as RequestStatus;
+
+      const requests = await this.requestService.getMyRequests(req.user!.userId, filters);
+      res.json(requests);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  startRequest = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const result = await this.requestService.startRequest(id, req.user!.userId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateProgress = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { workNotes, pauseWork } = req.body;
+      const result = await this.requestService.updateProgress(id, req.user!.userId, {
+        workNotes,
+        pauseWork,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  completeRequest = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { hoursSpent, rootCause, isTemporaryFix, workNotes } = req.body;
+
+      if (!hoursSpent || !rootCause) {
+        return res.status(400).json({ message: 'hoursSpent and rootCause are required' });
+      }
+
+      const result = await this.requestService.completeRequest(id, req.user!.userId, {
+        hoursSpent,
+        rootCause,
+        isTemporaryFix,
+        workNotes,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  markUnrepairable = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      if (!reason) {
+        return res.status(400).json({ message: 'Reason is required' });
+      }
+
+      const result = await this.requestService.markUnrepairable(id, req.user!.userId, { reason });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  escalateRequest = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      if (!reason) {
+        return res.status(400).json({ message: 'Reason is required' });
+      }
+
+      const result = await this.requestService.escalateRequest(id, req.user!.userId, { reason });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getMyWorkHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const history = await this.requestService.getMyWorkHistory(req.user!.userId);
+      res.json(history);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
+
