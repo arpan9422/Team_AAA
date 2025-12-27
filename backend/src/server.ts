@@ -5,6 +5,8 @@ import { config } from './config';
 import { swaggerSpec } from './config/swagger';
 import authRoutes from './modules/auth/auth.routes';
 import teamRoutes from './modules/team/team.routes';
+import employeeRoutes from './modules/employee/employee.routes';
+import kanbanRoutes from './modules/kanban/kanban.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
 
 const app = express();
@@ -25,6 +27,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/employee', employeeRoutes);
+app.use('/api/kanban', kanbanRoutes);
 
 app.use(errorHandler);
 
