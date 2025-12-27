@@ -14,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import {
     IconAlertTriangle,
     IconCpu,
@@ -25,7 +26,9 @@ import {
     IconMail,
     IconPhone,
     IconBriefcase,
-    IconMapPin
+    IconMapPin,
+    IconLogout,
+    IconPower
 } from "@tabler/icons-react"
 
 import api from "@/lib/api"
@@ -76,6 +79,12 @@ export default function EmployeeRequestPage() {
     const [submittedRequests, setSubmittedRequests] = React.useState<Request[]>([])
     const [showSuccess, setShowSuccess] = React.useState(false)
     const [loading, setLoading] = React.useState(true)
+
+    const handleLogout = () => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        router.push('/login')
+    }
 
     // Fetch initial data
     React.useEffect(() => {
@@ -219,6 +228,16 @@ export default function EmployeeRequestPage() {
                         </div>
                         <Button variant="ghost" size="icon" className="rounded-full bg-muted/50">
                             <IconUser className="size-5" />
+                        </Button>
+                        <Separator orientation="vertical" className="h-8 hidden sm:block mx-1" />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 font-bold gap-2"
+                            onClick={handleLogout}
+                        >
+                            <IconLogout className="size-4" />
+                            <span className="hidden sm:inline">Logout</span>
                         </Button>
                     </div>
                 </div>

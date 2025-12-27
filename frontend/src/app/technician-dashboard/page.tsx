@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Dialog } from "@/components/ui/dialog"
 import { RequestDetailsDialog } from "@/components/request-details-dialog"
+import api from "@/lib/api"
 import {
     IconClipboardCheck,
     IconClock,
@@ -128,13 +129,81 @@ const recentTasks = [
 ]
 
 export default function TechnicianDashboard() {
-    const [selectedTask, setSelectedTask] = React.useState<typeof recentTasks[0] | null>(null)
+    const [selectedTask, setSelectedTask] = React.useState<any | null>(null)
     const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+    const [loading, setLoading] = React.useState(true)
+    const [dashboardData, setDashboardData] = React.useState<any>(null)
+    const [activeTasks, setActiveTasks] = React.useState<any[]>([])
 
-    const handleTaskClick = (task: typeof recentTasks[0]) => {
+    React.useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true)
+                const [dashRes, tasksRes] = await Promise.all([
+                    api.get('/technician/dashboard'),
+                    api.get('/requests/my-requests', { params: { status: 'IN_PROGRESS' } })
+                ])
+                setDashboardData(dashRes.data)
+                setActiveTasks(tasksRes.data)
+            } catch (error) {
+                console.error("Failed to fetch technician dashboard data:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchData()
+    }, [])
+
+    const handleTaskClick = (task: any) => {
         setSelectedTask(task)
         setIsDialogOpen(true)
     }
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-bg-soft">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-muted-foreground font-medium animate-pulse">Loading dashboard...</p>
+                </div>
+            </div>
+        )
+    }
+
+    const stats = [
+        {
+            title: "Active Jobs",
+            value: dashboardData?.stats?.activeJobs || 0,
+            description: "Work in progress",
+            icon: IconClipboardCheck,
+            color: "text-accent-cyan",
+            bgColor: "bg-accent-cyan/10"
+        },
+        {
+            title: "Pending in Queue",
+            value: dashboardData?.stats?.pendingJobs || 0,
+            description: "Available from team",
+            icon: IconClock,
+            color: "text-accent-yellow",
+            bgColor: "bg-accent-yellow/10"
+        },
+        {
+            title: "Overdue",
+            value: dashboardData?.stats?.overdueJobs || 0,
+            description: "> 24h in progress",
+            icon: IconAlertTriangle,
+            color: "text-red-600",
+            bgColor: "bg-red-50"
+        },
+        {
+            title: "Completed",
+            value: dashboardData?.stats?.completedThisMonth || 0,
+            description: "This month",
+            icon: IconCircleCheck,
+            color: "text-primary",
+            bgColor: "bg-primary/10"
+        }
+    ]
 
     return (
         <SidebarProvider
@@ -193,41 +262,47 @@ export default function TechnicianDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {recentTasks.map((task) => (
-                                    <div
-                                        key={task.id}
-                                        onClick={() => handleTaskClick(task)}
-                                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 hover:border-accent-cyan/50 transition-all cursor-pointer group"
-                                    >
-                                        <div className="flex flex-col gap-1">
-                                            <h4 className="font-medium group-hover:text-accent-cyan transition-colors">{task.title}</h4>
-                                            <p className="text-sm text-muted-foreground">
-                                                {task.equipmentName} • Assigned {task.assignedDate}
-                                            </p>
+                                {activeTasks.length > 0 ? (
+                                    activeTasks.map((task) => (
+                                        <div
+                                            key={task.id}
+                                            onClick={() => handleTaskClick(task)}
+                                            className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 hover:border-accent-cyan/50 transition-all cursor-pointer group"
+                                        >
+                                            <div className="flex flex-col gap-1">
+                                                <h4 className="font-medium group-hover:text-accent-cyan transition-colors">{task.title}</h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {task.equipment?.name} • Assigned {new Date(task.createdAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <Badge
+                                                    variant={
+                                                        task.priority === "HIGH" || task.priority === "CRITICAL" ? "destructive" :
+                                                            task.priority === "MEDIUM" ? "default" : "secondary"
+                                                    }
+                                                >
+                                                    {task.priority}
+                                                </Badge>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        task.status === "NEW" ? "border-accent-cyan/30 text-accent-cyan bg-accent-cyan/10" :
+                                                            task.status === "IN_PROGRESS" ? "border-accent-yellow/30 text-accent-yellow bg-accent-yellow/10" :
+                                                                task.status === "REPAIRED" ? "border-primary/30 text-primary bg-primary/10" :
+                                                                    "border-green-200 text-green-700 bg-green-50"
+                                                    }
+                                                >
+                                                    {task.status.replace('_', ' ')}
+                                                </Badge>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <Badge
-                                                variant={
-                                                    task.priority === "High" ? "destructive" :
-                                                        task.priority === "Medium" ? "default" : "secondary"
-                                                }
-                                            >
-                                                {task.priority}
-                                            </Badge>
-                                            <Badge
-                                                variant="outline"
-                                                className={
-                                                    task.status === "NEW" ? "border-accent-cyan/30 text-accent-cyan bg-accent-cyan/10" :
-                                                        task.status === "IN_PROGRESS" ? "border-accent-yellow/30 text-accent-yellow bg-accent-yellow/10" :
-                                                            task.status === "REPAIRED" ? "border-primary/30 text-primary bg-primary/10" :
-                                                                "border-green-200 text-green-700 bg-green-50"
-                                                }
-                                            >
-                                                {task.status.replace('_', ' ')}
-                                            </Badge>
-                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        No active tasks found. Go to the tasks page to pick up new work.
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </CardContent>
                     </Card>

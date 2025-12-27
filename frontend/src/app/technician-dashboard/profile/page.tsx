@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import api from "@/lib/api"
 import {
     IconUser,
     IconMail,
@@ -27,8 +28,34 @@ import {
     IconTool
 } from "@tabler/icons-react"
 
+interface Certification {
+    name: string
+    issueDate: string
+    expiryDate: string
+}
+
+interface Profile {
+    name: string
+    email: string
+    phone: string
+    location: string
+    department: string
+    role: string
+    employeeId: string
+    joinDate: string
+    avatar: string
+    skills: string[]
+    certifications: Certification[]
+    stats: {
+        tasksCompleted: number
+        avgResponseTime: string
+        rating: number
+        yearsExperience: number
+    }
+}
+
 // Mock user profile data
-const initialProfile = {
+const initialProfile: Profile = {
     name: "John Doe",
     email: "john.doe@company.com",
     phone: "+1 (555) 123-4567",
@@ -53,11 +80,40 @@ const initialProfile = {
 }
 
 export default function TechnicianProfilePage() {
-    const [profile, setProfile] = React.useState(initialProfile)
+    const [profile, setProfile] = React.useState<Profile>(initialProfile)
     const [isEditing, setIsEditing] = React.useState(false)
-    const [editedProfile, setEditedProfile] = React.useState(initialProfile)
+    const [editedProfile, setEditedProfile] = React.useState<Profile>(initialProfile)
+    const [loading, setLoading] = React.useState(true)
 
-    const handleSave = () => {
+    React.useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                setLoading(true)
+                const response = await api.get('/auth/me')
+                const userData = response.data.user
+
+                // Merge with initialProfile for fields not yet in backend
+                const mergedProfile = {
+                    ...initialProfile,
+                    name: userData.name,
+                    email: userData.email,
+                    role: userData.role,
+                    employeeId: userData.employeeId || userData.id.substring(0, 8),
+                    department: userData.department || "Maintenance",
+                }
+                setProfile(mergedProfile)
+                setEditedProfile(mergedProfile)
+            } catch (error) {
+                console.error("Failed to fetch profile:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchProfile()
+    }, [])
+
+    const handleSave = async () => {
+        // Mock save for now
         setProfile(editedProfile)
         setIsEditing(false)
     }
@@ -65,6 +121,17 @@ export default function TechnicianProfilePage() {
     const handleCancel = () => {
         setEditedProfile(profile)
         setIsEditing(false)
+    }
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-bg-soft">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-muted-foreground font-medium animate-pulse">Loading profile...</p>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -118,7 +185,7 @@ export default function TechnicianProfilePage() {
                                         <Avatar className="size-32">
                                             <AvatarImage src={profile.avatar} />
                                             <AvatarFallback className="text-2xl">
-                                                {profile.name.split(' ').map(n => n[0]).join('')}
+                                                {profile.name.split(' ').map((n: string) => n[0]).join('')}
                                             </AvatarFallback>
                                         </Avatar>
                                     </div>
@@ -276,7 +343,7 @@ export default function TechnicianProfilePage() {
                                             Skills & Expertise
                                         </p>
                                         <div className="flex flex-wrap gap-2">
-                                            {profile.skills.map((skill, index) => (
+                                            {profile.skills.map((skill: string, index: number) => (
                                                 <Badge key={index} variant="secondary">
                                                     {skill}
                                                 </Badge>
@@ -296,7 +363,7 @@ export default function TechnicianProfilePage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-3">
-                                        {profile.certifications.map((cert, index) => (
+                                        {profile.certifications.map((cert: Certification, index: number) => (
                                             <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                                                 <div className="space-y-1">
                                                     <p className="font-medium">{cert.name}</p>

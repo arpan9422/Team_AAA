@@ -203,6 +203,10 @@ const options: swaggerJsdoc.Options = {
         name: 'Dashboard',
         description: 'Dashboard statistics and analytics - Total equipment, active requests, completed, and overdue',
       },
+      {
+        name: 'Technician',
+        description: 'Technician-specific endpoints for dashboard, history, and work management',
+      },
     ],
   },
   apis: ['./src/modules/auth/*.ts', './src/modules/**/*.ts'],
