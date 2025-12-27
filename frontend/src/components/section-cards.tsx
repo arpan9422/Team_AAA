@@ -17,7 +17,30 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export function SectionCards() {
+interface DashboardStats {
+  equipment: {
+    total: number;
+    active: number;
+    scrapped: number;
+  };
+  requests: {
+    active: number;
+    completedThisMonth: number;
+    overdue: number;
+    new: number;
+  };
+  technicians: {
+    active: number;
+  };
+}
+
+export function SectionCards({ stats }: { stats?: DashboardStats }) {
+  // Default values if stats are not loaded yet
+  const equipmentTotal = stats?.equipment?.total || 0;
+  const activeRequests = stats?.requests?.active || 0;
+  const completedMonth = stats?.requests?.completedThisMonth || 0;
+  const overdueRequests = stats?.requests?.overdue || 0;
+
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       <Card className="@container/card">
@@ -27,13 +50,10 @@ export function SectionCards() {
             <CardDescription>Total Equipments</CardDescription>
           </div>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            142
+            {equipmentTotal}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +4%
-            </Badge>
+
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
@@ -52,13 +72,10 @@ export function SectionCards() {
             <CardDescription>Active Request</CardDescription>
           </div>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            12
+            {activeRequests}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline" className="text-destructive border-destructive/50">
-              <IconTrendingUp />
-              +2
-            </Badge>
+
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
@@ -66,7 +83,7 @@ export function SectionCards() {
             Requires Attention <IconTrendingUp className="size-4" />
           </div>
           <div className="text-muted-foreground">
-            3 High priority
+            Pending requests
           </div>
         </CardFooter>
       </Card>
@@ -77,20 +94,17 @@ export function SectionCards() {
             <CardDescription>Completed (Month)</CardDescription>
           </div>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            45
+            {completedMonth}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline" className="text-green-600 border-green-600/30">
-              <IconTrendingUp />
-              +12.5%
-            </Badge>
+
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
             On Track <IconTrendingUp className="size-4" />
           </div>
-          <div className="text-muted-foreground">Exceeding monthly targets</div>
+          <div className="text-muted-foreground">Monthly completion</div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
@@ -100,20 +114,17 @@ export function SectionCards() {
             <CardDescription>Overdue</CardDescription>
           </div>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            3
+            {overdueRequests}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline" className="text-destructive border-destructive/50">
-              <IconTrendingDown />
-              -1
-            </Badge>
+
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
             Urgent Action Needed <IconAlertTriangle className="size-4" />
           </div>
-          <div className="text-muted-foreground">Pending over 48h</div>
+          <div className="text-muted-foreground">Past due date</div>
         </CardFooter>
       </Card>
     </div>

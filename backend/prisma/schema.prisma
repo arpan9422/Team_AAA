@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
@@ -84,6 +85,7 @@ model User {
   teamMembers              TeamMember[]
   equipmentAssignments     EquipmentAssignment[]
   workCenterAssignments    WorkCenterWorker[]
+  technicianApplications   TechnicianApplication[]
 
   @@map("users")
 }
@@ -235,6 +237,7 @@ model MaintenanceRequest {
   assignmentHistory AssignmentHistory[]
   workLogs          WorkLog[]
   escalationLogs    EscalationLog[]
+  applications      TechnicianApplication[]
 
   @@map("maintenance_request")
 }
@@ -251,6 +254,27 @@ model AssignmentHistory {
   assignerUser User?               @relation("AssignedByUser", fields: [assignedBy], references: [id])
 
   @@map("assignment_history")
+}
+
+model TechnicianApplication {
+  id           String            @id @default(uuid()) @db.Uuid
+  requestId    String            @map("request_id") @db.Uuid
+  technicianId String            @map("technician_id") @db.Uuid
+  status       ApplicationStatus @default(PENDING)
+  appliedAt    DateTime          @default(now()) @map("applied_at") @db.Timestamp()
+  notes        String?           @db.Text
+
+  request    MaintenanceRequest @relation(fields: [requestId], references: [id])
+  technician User               @relation(fields: [technicianId], references: [id])
+
+  @@unique([requestId, technicianId])
+  @@map("technician_application")
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model WorkLog {

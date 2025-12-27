@@ -45,7 +45,7 @@ import { RequestDetailsDialog } from "@/components/request-details-dialog"
 
 // Types matching the data
 type Request = {
-    id: number
+    id: string
     title: string
     equipmentName: string
     serialNumber: string
@@ -62,11 +62,22 @@ const COLUMNS = [
     { id: "SCRAP", title: "Scrap", color: "bg-red-500" },
 ]
 
-export function KanbanBoard({ data }: { data: any[] }) {
+export function KanbanBoard({
+    data,
+    onStatusChange
+}: {
+    data: any[],
+    onStatusChange?: (id: string, newStatus: string) => void
+}) {
     const [items, setItems] = React.useState<Request[]>(data)
-    const [activeId, setActiveId] = React.useState<number | null>(null)
+    const [activeId, setActiveId] = React.useState<string | null>(null)
     const [searchQuery, setSearchQuery] = React.useState("")
     const [typeFilter, setTypeFilter] = React.useState("All Types")
+
+    // Update items when data prop changes
+    React.useEffect(() => {
+        setItems(data);
+    }, [data]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -77,22 +88,28 @@ export function KanbanBoard({ data }: { data: any[] }) {
     )
 
     const handleDragStart = (event: DragStartEvent) => {
-        setActiveId(Number(event.active.id))
+        setActiveId(String(event.active.id))
     }
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
 
         if (over && active.id !== over.id) {
-            const activeItem = items.find((item) => item.id === Number(active.id))
+            const activeItem = items.find((item) => item.id === String(active.id))
             const overColumnId = over.id as string
 
             if (activeItem && COLUMNS.some((col) => col.id === overColumnId)) {
+                // Optimistic update
                 setItems((prev) =>
                     prev.map((item) =>
                         item.id === activeItem.id ? { ...item, status: overColumnId } : item
                     )
                 )
+
+                // Call parent handler
+                if (onStatusChange) {
+                    onStatusChange(activeItem.id, overColumnId)
+                }
             }
         }
         setActiveId(null)
