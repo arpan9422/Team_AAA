@@ -303,7 +303,7 @@ export class MaintenanceRequestService {
     // Increase technician's load
     await this.requestRepository.updateTechnicianLoad(technicianId, 1);
 
-    // Assign to technician and update status
+    // Assign to technician and update status to PENDING_APPROVAL
     const updatedRequest = await this.requestRepository.assignToTechnician(
       requestId,
       technicianId,
@@ -312,7 +312,54 @@ export class MaintenanceRequestService {
 
     return {
       request: updatedRequest,
-      message: 'Request accepted successfully',
+      message: 'Request accepted successfully. Waiting for manager approval.',
+    };
+  }
+
+  // MANAGER APPROVAL METHOD
+  async approveRequest(requestId: string, managerId: string) {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new Error('Maintenance request not found');
+    }
+
+    if (request.status !== RequestStatus.PENDING_APPROVAL) {
+      throw new Error('Only PENDING_APPROVAL requests can be approved');
+    }
+
+    if (!request.technicalId) {
+      throw new Error('No technician assigned to this request');
+    }
+
+    // Update status to IN_PROGRESS and record start time
+    const updatedRequest = await prisma.maintenanceRequest.update({
+      where: { id: requestId },
+      data: {
+        status: RequestStatus.IN_PROGRESS,
+        assignedTechnicianId: request.technicalId,
+        startTime: new Date(),
+      },
+      include: {
+        equipment: true,
+        team: true,
+        technician: {
+          select: { id: true, name: true, email: true },
+        },
+        assignedTechnician: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Log the approval
+    await this.requestRepository.addEscalationLog(
+      requestId,
+      `Manager approved request. Technician can now start work.`
+    );
+
+    return {
+      request: updatedRequest,
+      message: 'Request approved successfully. Technician can now start work.',
     };
   }
 

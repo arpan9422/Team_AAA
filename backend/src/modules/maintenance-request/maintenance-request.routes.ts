@@ -359,6 +359,45 @@ router.post('/:id/accept', authenticate, requestController.acceptRequest);
 
 /**
  * @swagger
+ * /api/requests/{id}/approve:
+ *   post:
+ *     summary: Manager approves technician's request (Manual Toggle)
+ *     description: After technician accepts a request, manager must approve before work can start
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Request ID
+ *     responses:
+ *       200:
+ *         description: Request approved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Request approved successfully. Technician can now start work.
+ *                 request:
+ *                   $ref: '#/components/schemas/MaintenanceRequest'
+ *       400:
+ *         description: Invalid request or status
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Request not found
+ */
+router.post('/:id/approve', authenticate, requestController.approveRequest);
+
+/**
+ * @swagger
  * /api/requests/{id}/reject:
  *   post:
  *     summary: Manager rejects technician's assignment and optionally reassigns

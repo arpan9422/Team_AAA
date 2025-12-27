@@ -4,7 +4,13 @@ const prisma = new PrismaClient();
 
 export class KanbanService {
   async getAllRequests() {
+    // Only show requests that are IN_PROGRESS or beyond (not NEW or PENDING_APPROVAL)
     return prisma.maintenanceRequest.findMany({
+      where: {
+        status: {
+          notIn: [RequestStatus.NEW, RequestStatus.PENDING_APPROVAL],
+        },
+      },
       include: {
         equipment: true,
         team: true,

@@ -149,12 +149,12 @@ export class MaintenanceRequestRepository {
   }
 
   async assignToTechnician(requestId: string, technicianId: string, assignedBy: string) {
-    // Update the request
+    // Update the request to PENDING_APPROVAL status (waiting for manager approval)
     const request = await prisma.maintenanceRequest.update({
       where: { id: requestId },
       data: {
         technicalId: technicianId,
-        status: RequestStatus.IN_PROGRESS,
+        status: RequestStatus.PENDING_APPROVAL,
       },
       include: {
         technician: true,

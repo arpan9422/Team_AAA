@@ -174,6 +174,17 @@ export class MaintenanceRequestController {
     }
   };
 
+  // MANAGER APPROVAL
+  approveRequest = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const result = await this.requestService.approveRequest(id, req.user!.userId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // TECHNICIAN-SPECIFIC ENDPOINTS
 
   getMyRequests = async (req: AuthRequest, res: Response, next: NextFunction) => {

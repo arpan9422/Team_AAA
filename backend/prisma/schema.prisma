@@ -25,6 +25,7 @@ enum RequestType {
 
 enum RequestStatus {
   NEW
+  PENDING_APPROVAL
   IN_PROGRESS
   REPAIRED
   SCRAP
