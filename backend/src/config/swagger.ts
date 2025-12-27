@@ -144,6 +144,42 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
+        MaintenanceTeam: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'Team unique identifier',
+            },
+            name: {
+              type: 'string',
+              description: 'Team name',
+            },
+            description: {
+              type: 'string',
+              description: 'Team description',
+            },
+            specialization: {
+              type: 'string',
+              description: 'Team specialization area',
+            },
+            isActive: {
+              type: 'boolean',
+              description: 'Whether team is active',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Team creation timestamp',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Team last update timestamp',
+            },
+          },
+        },
       },
     },
     tags: [
@@ -154,6 +190,18 @@ const options: swaggerJsdoc.Options = {
       {
         name: 'Teams',
         description: 'Maintenance team management (Manager only)',
+      },
+      {
+        name: 'Equipment',
+        description: 'Equipment management endpoints (Manager only)',
+      },
+      {
+        name: 'Maintenance Requests',
+        description: 'Maintenance request management - Manager can reassign, reject assignments, and update priorities',
+      },
+      {
+        name: 'Dashboard',
+        description: 'Dashboard statistics and analytics - Total equipment, active requests, completed, and overdue',
       },
     ],
   },

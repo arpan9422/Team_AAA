@@ -1,7 +1,14 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../shared/types';
 import { AuthService } from './auth.service';
-import { RegisterInput, LoginInput, RefreshTokenInput } from './auth.validation';
+import {
+  RegisterInput,
+  LoginInput,
+  RefreshTokenInput,
+  ForgotPasswordInput,
+  VerifyOTPInput,
+  ResetPasswordInput,
+} from './auth.validation';
 
 export class AuthController {
   private authService: AuthService;
@@ -74,6 +81,48 @@ export class AuthController {
     } catch (error: any) {
       console.error('Get me error:', error);
       return res.status(404).json({ error: 'User not found' });
+    }
+  };
+
+  forgotPassword = async (req: AuthRequest, res: Response) => {
+    try {
+      const { email }: ForgotPasswordInput = req.body;
+      const result = await this.authService.forgotPassword(email);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      return res.status(500).json({ error: 'Failed to process request' });
+    }
+  };
+
+  verifyOTP = async (req: AuthRequest, res: Response) => {
+    try {
+      const { email, otp }: VerifyOTPInput = req.body;
+      const result = await this.authService.verifyOTP(email, otp);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      if (error.message === 'Invalid or expired OTP') {
+        return res.status(400).json({ error: error.message });
+      }
+      console.error('Verify OTP error:', error);
+      return res.status(500).json({ error: 'Failed to verify OTP' });
+    }
+  };
+
+  resetPassword = async (req: AuthRequest, res: Response) => {
+    try {
+      const { email, otp, newPassword }: ResetPasswordInput = req.body;
+      const result = await this.authService.resetPassword(email, otp, newPassword);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      if (
+        error.message === 'Invalid or expired OTP' ||
+        error.message === 'OTP not verified. Please verify OTP first.'
+      ) {
+        return res.status(400).json({ error: error.message });
+      }
+      console.error('Reset password error:', error);
+      return res.status(500).json({ error: 'Failed to reset password' });
     }
   };
 }

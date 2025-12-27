@@ -52,4 +52,75 @@ export class AuthRepository {
       throw error;
     }
   }
+
+  async createPasswordResetOTP(email: string, otp: string, expiresAt: Date) {
+    // Delete any existing OTPs for this email
+    await prisma.passwordResetOTP.deleteMany({
+      where: { email },
+    });
+
+    return prisma.passwordResetOTP.create({
+      data: {
+        email,
+        otp,
+        expiresAt,
+      },
+    });
+  }
+
+  async findValidOTP(email: string, otp: string) {
+    return prisma.passwordResetOTP.findFirst({
+      where: {
+        email,
+        otp,
+        verified: false,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+    });
+  }
+
+  async findVerifiedOTP(email: string, otp: string) {
+    return prisma.passwordResetOTP.findFirst({
+      where: {
+        email,
+        otp,
+        verified: true,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+    });
+  }
+
+  async markOTPAsVerified(id: string) {
+    return prisma.passwordResetOTP.update({
+      where: { id },
+      data: { verified: true },
+    });
+  }
+
+  async updatePassword(email: string, hashedPassword: string) {
+    return prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+  }
+
+  async deleteOTP(id: string) {
+    return prisma.passwordResetOTP.delete({
+      where: { id },
+    });
+  }
+
+  async cleanupExpiredOTPs() {
+    return prisma.passwordResetOTP.deleteMany({
+      where: {
+        expiresAt: {
+          lt: new Date(),
+        },
+      },
+    });
+  }
 }

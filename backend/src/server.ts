@@ -5,6 +5,9 @@ import { config } from './config';
 import { swaggerSpec } from './config/swagger';
 import authRoutes from './modules/auth/auth.routes';
 import teamRoutes from './modules/team/team.routes';
+import equipmentRoutes from './modules/equipment/equipment.routes';
+import requestRoutes from './modules/maintenance-request/maintenance-request.routes';
+import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
 
 const app = express();
@@ -25,6 +28,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.use(errorHandler);
 
