@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  EMPLOYEE
+  TECHNICIAN
+  MANAGER
+}
+
+enum EquipmentStatus {
+  ACTIVE
+  SCRAPPED
+}
+
+enum RequestType {
+  CORRECTIVE
+  PREVENTIVE
+}
+
+enum RequestStatus {
+  NEW
+  IN_PROGRESS
+  REPAIRED
+  SCRAP
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EquipmentEvent {
+  CREATED
+  REPAIRED
+  SCRAPPED
+  TEAM_CHANGED
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  password  String   @db.VarChar(255)
+  role      UserRole
+  teamId    String?  @map("team_id") @db.Uuid
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  team                MaintenanceTeam?     @relation(fields: [teamId], references: [id])
+  technicianProfile   TechnicianProfile?
+  createdRequests     MaintenanceRequest[] @relation("CreatedByUser")
+  assignedRequests    MaintenanceRequest[] @relation("TechnicalUser")
+  assignmentsGiven    AssignmentHistory[]  @relation("AssignedByUser")
+  assignmentsReceived AssignmentHistory[]  @relation("AssignedToUser")
+  workLogs            WorkLog[]
+  refreshTokens       RefreshToken[]
+  teamMembers         TeamMember[]
+
+  @@map("users")
+}
+
+model MaintenanceTeam {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  users               User[]
+  teamMembers         TeamMember[]
+  equipment           Equipment[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@map("maintenance_team")
+}
+
+model TeamMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  teamId   String   @map("team_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamp()
+
+  team MaintenanceTeam @relation(fields: [teamId], references: [id])
+  user User            @relation(fields: [userId], references: [id])
+
+  @@map("team_member")
+}
+
+model TechnicianProfile {
+  userId          String   @id @map("user_id") @db.Uuid
+  skillTags       String[] @map("skill_tags")
+  experienceYears Int?     @map("experience_years")
+  currentLoad     Int      @default(0) @map("current_load")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("technician_profile")
+}
+
+model Equipment {
+  id            String          @id @default(uuid()) @db.Uuid
+  name          String          @db.VarChar(100)
+  serialNumber  String          @unique @map("serial_number") @db.VarChar(100)
+  location      String?         @db.VarChar(100)
+  department    String?         @db.VarChar(100)
+  primaryTeamId String?         @map("primary_team_id") @db.Uuid
+  purchaseDate  DateTime?       @map("purchase_date") @db.Date
+  warrantyEnd   DateTime?       @map("warranty_end") @db.Date
+  status        EquipmentStatus @default(ACTIVE)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamp()
+
+  primaryTeam         MaintenanceTeam?     @relation(fields: [primaryTeamId], references: [id])
+  maintenanceRequests MaintenanceRequest[]
+  equipmentHealth     EquipmentHealth?
+  equipmentHistory    EquipmentHistory[]
+
+  @@map("equipment")
+}
+
+model MaintenanceRequest {
+  id            String        @id @default(uuid()) @db.Uuid
+  title         String?       @db.VarChar(150)
+  description   String?       @db.Text
+  requestType   RequestType   @map("request_type")
+  equipmentId   String?       @map("equipment_id") @db.Uuid
+  teamId        String?       @map("team_id") @db.Uuid
+  technicalId   String?       @map("technical_id") @db.Uuid
+  status        RequestStatus @default(NEW)
+  priority      PriorityLevel @default(MEDIUM)
+  scheduledDate DateTime?     @map("scheduled_date") @db.Timestamp()
+  createdBy     String?       @map("created_by") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamp()
+  completedAt   DateTime?     @map("completed_at") @db.Timestamp()
+
+  equipment         Equipment?          @relation(fields: [equipmentId], references: [id])
+  team              MaintenanceTeam?    @relation(fields: [teamId], references: [id])
+  creator           User?               @relation("CreatedByUser", fields: [createdBy], references: [id])
+  technician        User?               @relation("TechnicalUser", fields: [technicalId], references: [id])
+  assignmentHistory AssignmentHistory[]
+  workLogs          WorkLog[]
+  escalationLogs    EscalationLog[]
+
+  @@map("maintenance_request")
+}
+
+model AssignmentHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  requestId  String?  @map("request_id") @db.Uuid
+  assignedTo String?  @map("assigned_to") @db.Uuid
+  assignedBy String?  @map("assigned_by") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamp()
+
+  request      MaintenanceRequest? @relation(fields: [requestId], references: [id])
+  assignedUser User?               @relation("AssignedToUser", fields: [assignedTo], references: [id])
+  assignerUser User?               @relation("AssignedByUser", fields: [assignedBy], references: [id])
+
+  @@map("assignment_history")
+}
+
+model WorkLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  requestId       String?  @map("request_id") @db.Uuid
+  technicianId    String?  @map("technician_id") @db.Uuid
+  hoursSpent      Decimal? @map("hours_spent") @db.Decimal(4, 2)
+  rootCause       String?  @map("root_cause") @db.VarChar(150)
+  resolutionNotes String?  @map("resolution_notes") @db.Text
+  loggedAt        DateTime @default(now()) @map("logged_at") @db.Timestamp()
+
+  request    MaintenanceRequest? @relation(fields: [requestId], references: [id])
+  technician User?               @relation(fields: [technicianId], references: [id])
+
+  @@map("work_log")
+}
+
+model EquipmentHealth {
+  equipmentId    String   @id @map("equipment_id") @db.Uuid
+  healthScore    Int?     @map("health_score")
+  breakdownCount Int?     @map("breakdown_count")
+  avgRepairTime  Decimal? @map("avg_repair_time") @db.Decimal(4, 2)
+  lastUpdated    DateTime @default(now()) @map("last_updated") @db.Timestamp()
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@map("equipment_health")
+}
+
+model EquipmentHistory {
+  id          String         @id @default(uuid()) @db.Uuid
+  equipmentId String?        @map("equipment_id") @db.Uuid
+  eventType   EquipmentEvent @map("event_type")
+  eventNote   String?        @map("event_note") @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamp()
+
+  equipment Equipment? @relation(fields: [equipmentId], references: [id])
+
+  @@map("equipment_history")
+}
+
+model EscalationLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  requestId   String?  @map("request_id") @db.Uuid
+  reason      String?  @db.Text
+  escalatedAt DateTime @default(now()) @map("escalated_at") @db.Timestamp()
+  resolved    Boolean  @default(false)
+
+  request MaintenanceRequest? @relation(fields: [requestId], references: [id])
+
+  @@map("escalation_log")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.VarChar(500)
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamp()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_token")
+}
