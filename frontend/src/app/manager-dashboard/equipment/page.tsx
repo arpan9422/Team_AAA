@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -38,121 +37,90 @@ import {
     IconTruck
 } from "@tabler/icons-react"
 import { EquipmentMaintenanceDialog } from "@/components/equipment-maintenance-dialog"
+import api from "@/lib/api"
+import { toast } from "sonner"
 
-// Mock Data
-type Equipment = {
+// Type definition matching backend
+export type Equipment = {
     id: string
     name: string
-    serial_number: string
-    location: string
-    department: string
-    primary_team_id: string
-    purchase_date: string
-    warranty_end: string
-    status: "active" | "inactive" | "maintenance"
-    created_at: string
-    icon?: any
+    serialNumber: string
+    location?: string
+    department?: string
+    primaryTeamId?: string
+    purchaseDate?: string
+    warrantyEnd?: string
+    status: "ACTIVE" | "SCRAPPED" | "IN_REPAIR" // Adjusted to match backend enum likely
+    createdAt: string
+    // Helper fields
     maintenance_count?: number
 }
 
-const initialEquipment: Equipment[] = [
-    {
-        id: "1",
-        name: "CNC Machine Alpha",
-        serial_number: "CNC-2024-001",
-        location: "Building A, Floor 1",
-        department: "Production",
-        primary_team_id: "team-alpha",
-        purchase_date: "2023-01-15",
-        warranty_end: "2025-03-15",
-        status: "active",
-        created_at: "2023-01-15T00:00:00Z",
-        icon: IconBolt,
-        maintenance_count: 2
-    },
-    {
-        id: "2",
-        name: "Forklift FL-200",
-        serial_number: "FL-2023-042",
-        location: "Warehouse B",
-        department: "Warehouse",
-        primary_team_id: "team-logistics",
-        purchase_date: "2023-06-10",
-        warranty_end: "2026-01-10",
-        status: "active",
-        created_at: "2023-06-10T00:00:00Z",
-        icon: IconTruck,
-        maintenance_count: 1
-    },
-    {
-        id: "3",
-        name: "Server Rack SR-01",
-        serial_number: "SR-2021-015",
-        location: "Server Room",
-        department: "IT",
-        primary_team_id: "team-it",
-        purchase_date: "2021-11-20",
-        warranty_end: "2024-11-20",
-        status: "maintenance",
-        created_at: "2021-11-20T00:00:00Z",
-        icon: IconServer,
-        maintenance_count: 0
-    },
-    {
-        id: "4",
-        name: "Laptop Dell XPS-15",
-        serial_number: "DELL-2024-089",
-        location: "Office 302",
-        department: "Marketing",
-        primary_team_id: "team-marketing",
-        purchase_date: "2024-02-01",
-        warranty_end: "2027-02-01",
-        status: "active",
-        created_at: "2024-02-01T00:00:00Z",
-        icon: IconDeviceLaptop,
-        maintenance_count: 1
-    },
-]
-
 export default function EquipmentPage() {
-    const [equipment, setEquipment] = React.useState<Equipment[]>(initialEquipment)
+    const [equipment, setEquipment] = React.useState<Equipment[]>([])
+    const [loading, setLoading] = React.useState(true)
     const [searchQuery, setSearchQuery] = React.useState("")
     const [isAddOpen, setIsAddOpen] = React.useState(false)
 
     // Form State
     const [formData, setFormData] = React.useState<Partial<Equipment>>({
-        status: "active",
-        purchase_date: new Date().toISOString().split('T')[0],
-        warranty_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+        status: "ACTIVE",
+        purchaseDate: new Date().toISOString().split('T')[0],
+        warrantyEnd: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
     })
+
+    const fetchEquipment = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get('/equipment');
+            setEquipment(res.data);
+        } catch (error) {
+            console.error("Failed to fetch equipment:", error);
+            toast.error("Failed to load equipment");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    React.useEffect(() => {
+        fetchEquipment();
+    }, [])
 
     const filteredEquipment = equipment.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.serial_number.toLowerCase().includes(searchQuery.toLowerCase())
+        item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const handleCreate = () => {
-        const newEquipment: Equipment = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: formData.name || "New Equipment",
-            serial_number: formData.serial_number || "UNKNOWN",
-            location: formData.location || "Unknown",
-            department: formData.department || "General",
-            primary_team_id: "team-general",
-            purchase_date: formData.purchase_date || "",
-            warranty_end: formData.warranty_end || "",
-            status: (formData.status as any) || "active",
-            created_at: new Date().toISOString(),
-            icon: IconCpu, // Default icon
-            maintenance_count: 0
+    const handleCreate = async () => {
+        try {
+            await api.post('/equipment', {
+                ...formData,
+                // Ensure required fields are present; backend validation will catch missing ones
+                purchaseDate: formData.purchaseDate ? new Date(formData.purchaseDate).toISOString() : undefined,
+                warrantyEnd: formData.warrantyEnd ? new Date(formData.warrantyEnd).toISOString() : undefined,
+                primaryTeamId: "93122709-009d-4299-8dcb-c05342a35640"// TODO: Remove hardcoded team ID, fetch available teams or select one
+            });
+            toast.success("Equipment created successfully");
+            setIsAddOpen(false);
+            fetchEquipment();
+            // Reset form
+            setFormData({
+                status: "ACTIVE",
+                purchaseDate: new Date().toISOString().split('T')[0],
+                warrantyEnd: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+            })
+        } catch (error) {
+            console.error("Failed to create equipment:", error);
+            toast.error("Failed to create equipment");
         }
-        setEquipment([newEquipment, ...equipment])
-        setIsAddOpen(false)
-        setFormData({
-            status: "active",
-            purchase_date: new Date().toISOString().split('T')[0],
-            warranty_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
-        })
+    }
+
+    const getIcon = (name: string) => {
+        const n = name.toLowerCase();
+        if (n.includes('server') || n.includes('rack')) return IconServer;
+        if (n.includes('laptop') || n.includes('computer')) return IconDeviceLaptop;
+        if (n.includes('truck') || n.includes('lift')) return IconTruck;
+        return IconCpu;
     }
 
     return (
@@ -198,7 +166,11 @@ export default function EquipmentPage() {
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="serial" className="text-right">Serial #</Label>
-                                        <Input id="serial" className="col-span-3" value={formData.serial_number || ""} onChange={e => setFormData({ ...formData, serial_number: e.target.value })} />
+                                        <Input id="serial" className="col-span-3" value={formData.serialNumber || ""} onChange={e => setFormData({ ...formData, serialNumber: e.target.value })} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="type" className="text-right">Type</Label>
+                                        <Input id="type" className="col-span-3" value={formData.name || ""} placeholder="e.g. Machine" onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="location" className="text-right">Location</Label>
@@ -215,9 +187,8 @@ export default function EquipmentPage() {
                                                 <SelectValue placeholder="Select status" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="active">Active</SelectItem>
-                                                <SelectItem value="inactive">Inactive</SelectItem>
-                                                <SelectItem value="maintenance">Maintenance</SelectItem>
+                                                <SelectItem value="ACTIVE">Active</SelectItem>
+                                                <SelectItem value="SCRAPPED">Scrapped</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -250,83 +221,74 @@ export default function EquipmentPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all-depts">All Departments</SelectItem>
-                                    <SelectItem value="production">Production</SelectItem>
-                                    <SelectItem value="it">IT</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select defaultValue="all-cats">
-                                <SelectTrigger className="w-[160px]">
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                        <IconFilter className="h-4 w-4" />
-                                        <SelectValue placeholder="All Categories" />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all-cats">All Categories</SelectItem>
-                                    <SelectItem value="machines">Machines</SelectItem>
-                                    <SelectItem value="electronics">Electronics</SelectItem>
+                                    <SelectItem value="Production">Production</SelectItem>
+                                    <SelectItem value="IT">IT</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
 
                     {/* Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredEquipment.map((item) => (
-                            <Card key={item.id} className="hover:shadow-md transition-shadow">
-                                <CardHeader className="flex flex-row items-start justify-between pb-2">
-                                    <div className="flex gap-4">
-                                        <div className="size-12 rounded-lg bg-gray-100 flex items-center justify-center text-purple-600">
-                                            {item.icon ? <item.icon className="size-6" /> : <IconCpu className="size-6" />}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg leading-none">{item.name}</h3>
-                                            <p className="text-sm text-muted-foreground mt-1">{item.serial_number}</p>
-                                        </div>
-                                    </div>
-                                    <Badge
-                                        variant={item.status === 'active' ? 'default' : 'secondary'}
-                                        className={item.status === 'active' ? 'bg-green-500 hover:bg-green-600' : ''}
-                                    >
-                                        {item.status}
-                                    </Badge>
-                                </CardHeader>
-                                <CardContent className="space-y-3 pb-4">
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <IconMapPin className="size-4" />
-                                        <span>{item.location}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <IconBuilding className="size-4" />
-                                        <span>{item.department} • {item.primary_team_id}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 w-fit px-2 py-1 rounded-md">
-                                        <IconCalendar className="size-4" />
-                                        <span className="font-medium">Warranty: {new Date(item.warranty_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                                    </div>
-                                </CardContent>
-                                <CardFooter>
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button variant="ghost" className="w-full justify-between bg-muted/40 hover:bg-muted">
-                                                <span className="flex items-center gap-2 text-muted-foreground">
-                                                    <IconTool className="size-4" />
-                                                    Maintenance
-                                                    {item.maintenance_count && item.maintenance_count > 0 && (
-                                                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 h-5 px-1.5 ml-1">
-                                                            {item.maintenance_count}
-                                                        </Badge>
-                                                    )}
-                                                </span>
-                                                <span className="text-muted-foreground">›</span>
-                                            </Button>
-                                        </DialogTrigger>
-                                        <EquipmentMaintenanceDialog equipment={item} />
-                                    </Dialog>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
+                    {loading ? (
+                        <div className="flex justify-center p-8">Loading equipment...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {filteredEquipment.map((item) => {
+                                const Icon = getIcon(item.name);
+                                return (
+                                    <Card key={item.id} className="hover:shadow-md transition-shadow">
+                                        <CardHeader className="flex flex-row items-start justify-between pb-2">
+                                            <div className="flex gap-4">
+                                                <div className="size-12 rounded-lg bg-gray-100 flex items-center justify-center text-purple-600">
+                                                    <Icon className="size-6" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-semibold text-lg leading-none">{item.name}</h3>
+                                                    <p className="text-sm text-muted-foreground mt-1">{item.serialNumber}</p>
+                                                </div>
+                                            </div>
+                                            <Badge
+                                                variant={item.status === 'ACTIVE' ? 'default' : 'secondary'}
+                                                className={item.status === 'ACTIVE' ? 'bg-green-500 hover:bg-green-600' : ''}
+                                            >
+                                                {item.status}
+                                            </Badge>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3 pb-4">
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <IconMapPin className="size-4" />
+                                                <span>{item.location || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <IconBuilding className="size-4" />
+                                                <span>{item.department || 'General'}</span>
+                                            </div>
+                                            {item.warrantyEnd && (
+                                                <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 w-fit px-2 py-1 rounded-md">
+                                                    <IconCalendar className="size-4" />
+                                                    <span className="font-medium">Warranty: {new Date(item.warrantyEnd).toLocaleDateString()}</span>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                        <CardFooter>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="ghost" className="w-full justify-between bg-muted/40 hover:bg-muted">
+                                                        <span className="flex items-center gap-2 text-muted-foreground">
+                                                            <IconTool className="size-4" />
+                                                            Maintenance
+                                                        </span>
+                                                        <span className="text-muted-foreground">›</span>
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <EquipmentMaintenanceDialog equipment={item} />
+                                            </Dialog>
+                                        </CardFooter>
+                                    </Card>
+                                )
+                            })}
+                        </div>
+                    )}
 
                 </div>
             </SidebarInset>

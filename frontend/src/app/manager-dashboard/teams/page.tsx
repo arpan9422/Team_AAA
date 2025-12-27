@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -36,65 +35,38 @@ import {
     IconCrown,
     IconMail
 } from "@tabler/icons-react"
+import api from "@/lib/api"
+import { toast } from "sonner"
 
-// Mock Data
+// Types matching backend
 type Member = {
     id: string
     name: string
     email: string
-    role: "manager" | "technician" | "admin"
+    role: "MANAGER" | "TECHNICIAN" | "EMPLOYEE"
     avatar?: string
 }
 
 type Team = {
     id: string
     name: string
-    description: string
-    icon_color: string
-    icon_bg: string
-    members: Member[]
+    description?: string
+    isActive: boolean
+    // Frontend helpers
+    icon_color?: string
+    icon_bg?: string
+    members?: Member[] // May require separate fetch or include
+    _count?: {
+        users: number
+    }
 }
 
-const initialTeams: Team[] = [
-    {
-        id: "1",
-        name: "Mechanics",
-        description: "Industrial machinery and mechanical systems",
-        icon_color: "text-slate-600",
-        icon_bg: "bg-slate-100",
-        members: [
-            { id: "m1", name: "John Martinez", email: "john.m@company.com", role: "manager", avatar: "https://i.pravatar.cc/150?u=john" },
-            { id: "m2", name: "Sarah Chen", email: "sarah.c@company.com", role: "technician", avatar: "https://i.pravatar.cc/150?u=sarah" },
-            { id: "m3", name: "Mike Johnson", email: "mike.j@company.com", role: "technician", avatar: "https://i.pravatar.cc/150?u=mike" },
-        ]
-    },
-    {
-        id: "2",
-        name: "Electricians",
-        description: "Electrical systems and power equipment",
-        icon_color: "text-amber-600",
-        icon_bg: "bg-amber-100",
-        members: [
-            { id: "e1", name: "Emily Davis", email: "emily.d@company.com", role: "manager" },
-            { id: "e2", name: "Alex Turner", email: "alex.t@company.com", role: "technician" },
-        ]
-    },
-    {
-        id: "3",
-        name: "IT Support",
-        description: "Computers, networks, and software systems",
-        icon_color: "text-cyan-600",
-        icon_bg: "bg-cyan-100",
-        members: [
-            { id: "i1", name: "Lisa Wong", email: "lisa.w@company.com", role: "manager" },
-        ]
-    }
-]
-
 export default function TeamsPage() {
-    const [teams, setTeams] = React.useState<Team[]>(initialTeams)
+    const [teams, setTeams] = React.useState<Team[]>([])
+    const [loading, setLoading] = React.useState(true)
     const [searchQuery, setSearchQuery] = React.useState("")
     const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null)
+    const [selectedTeamMembers, setSelectedTeamMembers] = React.useState<Member[]>([])
 
     // Dialog States
     const [isAddTeamOpen, setIsAddTeamOpen] = React.useState(false)
@@ -103,47 +75,95 @@ export default function TeamsPage() {
 
     // Form States
     const [newTeamData, setNewTeamData] = React.useState({ name: "", description: "" })
-    const [newMemberData, setNewMemberData] = React.useState({ name: "", email: "", role: "technician" })
+
+    // For adding member, we ideally list all users. For now, we'll just require User ID (simplified) 
+    // or we could fetch available users. Let's start with User ID input for MVP.
+    const [newMemberUserId, setNewMemberUserId] = React.useState("")
+
+    const fetchTeams = async () => {
+        try {
+            setLoading(true)
+            const res = await api.get('/teams')
+            // Backend returns { teams: [...] }
+            const teamsData = res.data.teams.map((t: any) => ({
+                ...t,
+                icon_color: "text-slate-600", // Default style
+                icon_bg: "bg-slate-100"
+            }))
+            setTeams(teamsData)
+        } catch (error) {
+            console.error("Failed to fetch teams:", error)
+            toast.error("Failed to load teams")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    React.useEffect(() => {
+        fetchTeams()
+    }, [])
+
+    const fetchTeamMembers = async (teamId: string) => {
+        try {
+            const res = await api.get(`/teams/${teamId}/members`)
+            // Backend returns { members: [...] } where member has .user nested or direct?
+            // Controller: getTeamMembers -> service.getTeamMembers -> returns TeamMember[], include user
+            // Let's assume response structure: { members: [{ user: { id, name, email, role } }, ...] }
+            const members = res.data.members.map((m: any) => ({
+                id: m.userId,
+                name: m.user?.name || "Unknown",
+                email: m.user?.email || "",
+                role: m.user?.role || "EMPLOYEE",
+                avatar: `https://i.pravatar.cc/150?u=${m.userId}`
+            }))
+            setSelectedTeamMembers(members)
+        } catch (error) {
+            console.error("Failed to fetch members:", error)
+            toast.error("Failed to load team members")
+        }
+    }
 
     const filteredTeams = teams.filter(team =>
         team.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const handleCreateTeam = () => {
-        const newTeam: Team = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: newTeamData.name || "New Team",
-            description: newTeamData.description || "No description",
-            icon_color: "text-purple-600",
-            icon_bg: "bg-purple-100",
-            members: []
+    const handleCreateTeam = async () => {
+        try {
+            await api.post('/teams', newTeamData)
+            toast.success("Team created successfully")
+            setIsAddTeamOpen(false)
+            setNewTeamData({ name: "", description: "" })
+            fetchTeams()
+        } catch (error) {
+            console.error("Failed to create team:", error)
+            toast.error("Failed to create team")
         }
-        setTeams([...teams, newTeam])
-        setNewTeamData({ name: "", description: "" })
-        setIsAddTeamOpen(false)
     }
 
-    const handleAddMember = () => {
+    const handleAddMember = async () => {
         if (!selectedTeam) return
-
-        const newMember: Member = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: newMemberData.name || "New Member",
-            email: newMemberData.email || "user@company.com",
-            role: newMemberData.role as "manager" | "technician",
+        try {
+            // Looking up user ID might be hard for user. 
+            // Ideally we have a user select dropdown. 
+            // For now, assuming user enters a valid UUID for simplicity or we need a user search.
+            // Let's warn if not UUID.
+            await api.post(`/teams/${selectedTeam.id}/members`, { userId: newMemberUserId })
+            toast.success("Member added successfully")
+            setIsAddMemberOpen(false)
+            setNewMemberUserId("")
+            // Refresh members
+            fetchTeamMembers(selectedTeam.id)
+        } catch (error) {
+            console.error("Failed to add member:", error)
+            toast.error("Failed to add member. Ensure User ID is valid.")
         }
+    }
 
-        const updatedTeams = teams.map(t => {
-            if (t.id === selectedTeam.id) {
-                return { ...t, members: [...t.members, newMember] }
-            }
-            return t
-        })
-
-        setTeams(updatedTeams)
-        setSelectedTeam({ ...selectedTeam, members: [...selectedTeam.members, newMember] })
-        setNewMemberData({ name: "", email: "", role: "technician" })
-        setIsAddMemberOpen(false)
+    const openTeamDetails = (team: Team) => {
+        setSelectedTeam(team)
+        setSelectedTeamMembers([]) // Clear valid
+        setIsDetailOpen(true)
+        fetchTeamMembers(team.id)
     }
 
     return (
@@ -222,54 +242,40 @@ export default function TeamsPage() {
                     </div>
 
                     {/* Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredTeams.map((team) => (
-                            <div
-                                key={team.id}
-                                className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-between h-[180px]"
-                                onClick={() => {
-                                    setSelectedTeam(team)
-                                    setIsDetailOpen(true)
-                                }}
-                            >
-                                <div className="p-6">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex gap-4">
-                                            <div className={`size-12 rounded-lg flex items-center justify-center ${team.icon_bg} ${team.icon_color}`}>
-                                                <IconUsers className="size-6" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-semibold text-lg leading-none">{team.name}</h3>
-                                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2 pr-4">{team.description}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-6 pt-0 mt-auto">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex -space-x-2">
-                                            {team.members.slice(0, 3).map((member) => (
-                                                <Avatar key={member.id} className="size-8 border-2 border-background">
-                                                    <AvatarImage src={member.avatar} />
-                                                    <AvatarFallback className="text-[10px font-medium bg-muted text-muted-foreground">
-                                                        {member.name.slice(0, 2).toUpperCase()}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                            ))}
-                                            {team.members.length > 3 && (
-                                                <div className="size-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
-                                                    +{team.members.length - 3}
+                    {loading ? (
+                        <div className="flex justify-center p-12">Loading teams...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {filteredTeams.map((team) => (
+                                <div
+                                    key={team.id}
+                                    className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-between h-[180px]"
+                                    onClick={() => openTeamDetails(team)}
+                                >
+                                    <div className="p-6">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex gap-4">
+                                                <div className={`size-12 rounded-lg flex items-center justify-center ${team.icon_bg} ${team.icon_color}`}>
+                                                    <IconUsers className="size-6" />
                                                 </div>
-                                            )}
+                                                <div>
+                                                    <h3 className="font-semibold text-lg leading-none">{team.name}</h3>
+                                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2 pr-4">{team.description}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted font-normal">
-                                            {team.members.length} {team.members.length === 1 ? 'member' : 'members'}
-                                        </Badge>
+                                    </div>
+                                    <div className="p-6 pt-0 mt-auto">
+                                        <div className="flex items-center justify-between">
+                                            <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted font-normal">
+                                                Click to view members
+                                            </Badge>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Team Details Dialog */}
                     <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
@@ -294,39 +300,43 @@ export default function TeamsPage() {
                                     <div className="p-6 bg-slate-50/50 min-h-[300px]">
                                         <div className="flex items-center justify-between mb-4">
                                             <h4 className="font-semibold text-sm">Team Members</h4>
-                                            <Badge variant="secondary" className="bg-white shadow-sm border">{selectedTeam.members.length} members</Badge>
+                                            <Badge variant="secondary" className="bg-white shadow-sm border">{selectedTeamMembers.length} members</Badge>
                                         </div>
 
                                         <div className="space-y-2">
-                                            {selectedTeam.members.map((member) => (
-                                                <div key={member.id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm group hover:border-purple-200 transition-colors">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar className="size-10">
-                                                            <AvatarImage src={member.avatar} />
-                                                            <AvatarFallback className="bg-slate-100 text-slate-600">
-                                                                {member.name.slice(0, 2).toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="grid gap-0.5">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium text-sm leading-none">{member.name}</span>
-                                                                {member.role === 'manager' && <IconCrown className="size-3 text-amber-500 fill-amber-500" />}
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                                                <IconMail className="size-3" />
-                                                                <span>{member.email}</span>
+                                            {selectedTeamMembers.length === 0 ? (
+                                                <div className="text-sm text-muted-foreground text-center py-4">No members assigned</div>
+                                            ) : (
+                                                selectedTeamMembers.map((member) => (
+                                                    <div key={member.id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm group hover:border-purple-200 transition-colors">
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar className="size-10">
+                                                                <AvatarImage src={member.avatar} />
+                                                                <AvatarFallback className="bg-slate-100 text-slate-600">
+                                                                    {member.name.slice(0, 2).toUpperCase()}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="grid gap-0.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-medium text-sm leading-none">{member.name}</span>
+                                                                    {member.role === 'MANAGER' && <IconCrown className="size-3 text-amber-500 fill-amber-500" />}
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                                    <IconMail className="size-3" />
+                                                                    <span>{member.email}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    <Badge
-                                                        variant={member.role === 'manager' ? 'default' : 'secondary'}
-                                                        className={member.role === 'manager' ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-100 border-slate-200'}
-                                                    >
-                                                        {member.role}
-                                                    </Badge>
-                                                </div>
-                                            ))}
+                                                        <Badge
+                                                            variant={member.role === 'MANAGER' ? 'default' : 'secondary'}
+                                                            className={member.role === 'MANAGER' ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-100 border-slate-200'}
+                                                        >
+                                                            {member.role}
+                                                        </Badge>
+                                                    </div>
+                                                ))
+                                            )}
                                         </div>
                                     </div>
 
@@ -341,41 +351,18 @@ export default function TeamsPage() {
                                             <DialogContent>
                                                 <DialogHeader>
                                                     <DialogTitle>Add Team Member</DialogTitle>
-                                                    <DialogDescription>Add a new member to {selectedTeam.name}.</DialogDescription>
+                                                    <DialogDescription>Enter User ID to add to {selectedTeam.name}.</DialogDescription>
                                                 </DialogHeader>
                                                 <div className="grid gap-4 py-4">
                                                     <div className="grid grid-cols-4 items-center gap-4">
-                                                        <Label htmlFor="mem-name" className="text-right">Name</Label>
+                                                        <Label htmlFor="mem-id" className="text-right">User ID</Label>
                                                         <Input
-                                                            id="mem-name"
+                                                            id="mem-id"
                                                             className="col-span-3"
-                                                            value={newMemberData.name}
-                                                            onChange={(e) => setNewMemberData({ ...newMemberData, name: e.target.value })}
+                                                            placeholder="UUID"
+                                                            value={newMemberUserId}
+                                                            onChange={(e) => setNewMemberUserId(e.target.value)}
                                                         />
-                                                    </div>
-                                                    <div className="grid grid-cols-4 items-center gap-4">
-                                                        <Label htmlFor="mem-email" className="text-right">Email</Label>
-                                                        <Input
-                                                            id="mem-email"
-                                                            className="col-span-3"
-                                                            value={newMemberData.email}
-                                                            onChange={(e) => setNewMemberData({ ...newMemberData, email: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="grid grid-cols-4 items-center gap-4">
-                                                        <Label htmlFor="mem-role" className="text-right">Role</Label>
-                                                        <Select
-                                                            value={newMemberData.role}
-                                                            onValueChange={(v) => setNewMemberData({ ...newMemberData, role: v })}
-                                                        >
-                                                            <SelectTrigger className="col-span-3">
-                                                                <SelectValue placeholder="Select role" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="technician">Technician</SelectItem>
-                                                                <SelectItem value="manager">Manager</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
                                                     </div>
                                                 </div>
                                                 <DialogFooter>
@@ -383,8 +370,6 @@ export default function TeamsPage() {
                                                 </DialogFooter>
                                             </DialogContent>
                                         </Dialog>
-
-
                                     </div>
                                 </>
                             )}

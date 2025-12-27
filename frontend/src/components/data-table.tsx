@@ -122,10 +122,10 @@ import {
 import { RequestDetailsDialog } from "@/components/request-details-dialog"
 
 export const schema = z.object({
-  id: z.number(),
-  title: z.string(),
-  equipmentName: z.string(),
-  serialNumber: z.string(),
+  id: z.string(),
+  title: z.string().nullable().optional(),
+  equipmentName: z.string().nullable().optional(),
+  serialNumber: z.string().nullable().optional(),
   createdAt: z.string(),
   priority: z.string(),
   requestType: z.string(),
