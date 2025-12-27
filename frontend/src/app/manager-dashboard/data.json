@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "title": "Laptop overheating",
+    "equipmentName": "Dell XPS 15",
+    "serialNumber": "DX-100293",
+    "createdAt": "2024-04-12",
+    "priority": "High",
+    "requestType": "CORRECTIVE",
+    "status": "NEW"
+  },
+  {
+    "id": 2,
+    "title": "Quarterly Maintenance",
+    "equipmentName": "Server Rack A",
+    "serialNumber": "SR-99281",
+    "createdAt": "2024-04-10",
+    "priority": "Medium",
+    "requestType": "PREVENTIVE",
+    "status": "IN_PROGRESS"
+  },
+  {
+    "id": 3,
+    "title": "Broken Screen",
+    "equipmentName": "Monitor LG 27",
+    "serialNumber": "LG-22311",
+    "createdAt": "2024-04-05",
+    "priority": "Low",
+    "requestType": "CORRECTIVE",
+    "status": "REPAIRED"
+  },
+  {
+    "id": 4,
+    "title": "Keyboard Malfunction",
+    "equipmentName": "Keychron K2",
+    "serialNumber": "KC-88123",
+    "createdAt": "2024-04-14",
+    "priority": "Medium",
+    "requestType": "CORRECTIVE",
+    "status": "SCRAP"
+  },
+  {
+    "id": 5,
+    "title": "Routine Inspection",
+    "equipmentName": "Generator G1",
+    "serialNumber": "GN-11002",
+    "createdAt": "2024-04-01",
+    "priority": "High",
+    "requestType": "PREVENTIVE",
+    "status": "NEW"
+  },
+  {
+    "id": 6,
+    "title": "Software Update",
+    "equipmentName": "Workstation W-01",
+    "serialNumber": "WS-55412",
+    "createdAt": "2024-04-11",
+    "priority": "Low",
+    "requestType": "PREVENTIVE",
+    "status": "IN_PROGRESS"
+  },
+  {
+    "id": 7,
+    "title": "Battery Replacement",
+    "equipmentName": "UPS Unit 3",
+    "serialNumber": "UPS-30021",
+    "createdAt": "2024-03-29",
+    "priority": "Medium",
+    "requestType": "CORRECTIVE",
+    "status": "NEW"
+  }
+]
