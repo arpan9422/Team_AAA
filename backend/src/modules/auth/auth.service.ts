@@ -110,7 +110,10 @@ export class AuthService {
   }
 
   async logout(refreshToken: string) {
-    await this.authRepository.deleteRefreshToken(refreshToken);
+    const result = await this.authRepository.deleteRefreshToken(refreshToken);
+    if (!result) {
+      throw new Error('Refresh token not found or already invalidated');
+    }
   }
 
   async getCurrentUser(userId: string) {
