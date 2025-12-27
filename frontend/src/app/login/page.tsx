@@ -29,7 +29,7 @@ export default function Login() {
       } else if (user.role === 'TECHNICIAN') {
         window.location.href = '/technician-dashboard';
       } else {
-        window.location.href = '/employee-dashboard';
+        window.location.href = '/employee-request';
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Login failed. Please check your credentials.';

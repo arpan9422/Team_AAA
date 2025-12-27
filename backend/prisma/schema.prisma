@@ -83,6 +83,7 @@ model User {
   refreshTokens            RefreshToken[]
   teamMembers              TeamMember[]
   equipmentAssignments     EquipmentAssignment[]
+  workCenterAssignments    WorkCenterWorker[]
   technicianApplications   TechnicianApplication[]
 
   @@map("users")
@@ -169,6 +170,40 @@ model EquipmentAssignment {
   @@map("equipment_assignment")
 }
 
+model WorkCenter {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @db.VarChar(100)
+  code            String   @unique @db.VarChar(50)
+  type            String?  @db.VarChar(100)
+  tag             String?  @db.VarChar(100)
+  location        String?  @db.VarChar(200)
+  costPerHour     Decimal? @map("cost_per_hour") @db.Decimal(10, 2)
+  capacity        Int?     @default(1)
+  timeEfficiency  Int?     @map("time_efficiency") @default(100)
+  oeeTarget       Int?     @map("oee_target")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+
+  assignedWorkers      WorkCenterWorker[]
+  maintenanceRequests  MaintenanceRequest[]
+
+  @@map("work_center")
+}
+
+model WorkCenterWorker {
+  id           String   @id @default(uuid()) @db.Uuid
+  workCenterId String   @map("work_center_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  assignedAt   DateTime @default(now()) @map("assigned_at") @db.Timestamp()
+
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workCenterId, userId])
+  @@map("work_center_worker")
+}
+
 model MaintenanceRequest {
   id                    String        @id @default(uuid()) @db.Uuid
   title                 String?       @db.VarChar(150)
@@ -178,6 +213,7 @@ model MaintenanceRequest {
   teamId                String?       @map("team_id") @db.Uuid
   technicalId           String?       @map("technical_id") @db.Uuid
   assignedTechnicianId  String?       @map("assigned_technician_id") @db.Uuid
+  workCenterId          String?       @map("work_center_id") @db.Uuid
   status                RequestStatus @default(NEW)
   priority              PriorityLevel @default(MEDIUM)
   scheduledDate         DateTime?     @map("scheduled_date") @db.Timestamp()
@@ -193,6 +229,7 @@ model MaintenanceRequest {
 
   equipment         Equipment?          @relation(fields: [equipmentId], references: [id])
   team              MaintenanceTeam?    @relation(fields: [teamId], references: [id])
+  workCenter        WorkCenter?         @relation(fields: [workCenterId], references: [id])
   creator           User?               @relation("CreatedByUser", fields: [createdBy], references: [id])
   technician        User?               @relation("TechnicalUser", fields: [technicalId], references: [id])
   assignedTechnician User?              @relation("AssignedTechnicianUser", fields: [assignedTechnicianId], references: [id])
