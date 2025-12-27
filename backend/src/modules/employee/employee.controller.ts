@@ -12,7 +12,7 @@ export const createRequest = async (req: AuthRequest, res: Response) => {
     }
 
     const requestData = req.body;
-    
+
     // Basic validation
     if (!requestData.title || !requestData.requestType) {
       return res.status(400).json({ error: 'Title and Request Type are required' });
@@ -38,5 +38,20 @@ export const getMyRequests = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error fetching requests:', error);
     res.status(500).json({ error: 'Failed to fetch maintenance requests' });
+  }
+};
+
+export const getMyEquipment = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const equipment = await employeeService.getMyEquipment(userId);
+    res.json(equipment);
+  } catch (error) {
+    console.error('Error fetching employee equipment:', error);
+    res.status(500).json({ error: 'Failed to fetch employee equipment' });
   }
 };

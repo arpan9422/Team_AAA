@@ -39,4 +39,20 @@ export class EmployeeService {
       },
     });
   }
+
+  async getMyEquipment(userId: string) {
+    return prisma.equipmentAssignment.findMany({
+      where: {
+        userId: userId,
+        isActive: true,
+      },
+      include: {
+        equipment: {
+          include: {
+            primaryTeam: true,
+          },
+        },
+      },
+    });
+  }
 }

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../shared/middleware/auth.middleware';
-import { createRequest, getMyRequests } from './employee.controller';
+import { createRequest, getMyRequests, getMyEquipment } from './employee.controller';
 
 const router = Router();
 
@@ -72,5 +72,21 @@ router.post('/', createRequest);
  *         description: Unauthorized
  */
 router.get('/', getMyRequests);
+
+/**
+ * @swagger
+ * /api/employee/equipment:
+ *   get:
+ *     summary: Get equipment assigned to the current user
+ *     tags: [Employee]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of equipment assignments retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/equipment', getMyEquipment);
 
 export default router;
