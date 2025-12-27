@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react';
 import { z } from 'zod';
+import api from '@/lib/api';
 
 const signupSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -38,15 +39,22 @@ export default function Signup() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       signupSchema.parse(formData);
       setErrors({});
-      // Handle successful validation (e.g., submit to API)
-      console.log('Form submitted:', formData);
-      alert('Signup successful!');
-    } catch (error) {
+
+      await api.post('/auth/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role.toUpperCase(), // Backend expects uppercase roles
+      });
+
+      alert('Signup successful! Please log in.');
+      window.location.href = '/login';
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         const newErrors: Partial<Record<keyof SignupFormData, string>> = {};
         error.issues.forEach((err) => {
@@ -56,6 +64,9 @@ export default function Signup() {
           }
         });
         setErrors(newErrors);
+      } else {
+        const apiError = error.response?.data?.error || 'Signup failed. Please try again.';
+        alert(apiError);
       }
     }
   };
