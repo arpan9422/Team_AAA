@@ -303,7 +303,7 @@ export class MaintenanceRequestService {
     // Increase technician's load
     await this.requestRepository.updateTechnicianLoad(technicianId, 1);
 
-    // Assign to technician and update status
+    // Assign to technician and update status to PENDING_APPROVAL
     const updatedRequest = await this.requestRepository.assignToTechnician(
       requestId,
       technicianId,
@@ -312,10 +312,397 @@ export class MaintenanceRequestService {
 
     return {
       request: updatedRequest,
-      message: 'Request accepted successfully',
+      message: 'Request accepted successfully. Waiting for manager approval.',
     };
+  }
+
+  // MANAGER APPROVAL METHOD
+  async approveRequest(requestId: string, managerId: string) {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new Error('Maintenance request not found');
+    }
+
+    if (request.status !== RequestStatus.PENDING_APPROVAL) {
+      throw new Error('Only PENDING_APPROVAL requests can be approved');
+    }
+
+    if (!request.technicalId) {
+      throw new Error('No technician assigned to this request');
+    }
+
+    // Update status to IN_PROGRESS and record start time
+    const updatedRequest = await prisma.maintenanceRequest.update({
+      where: { id: requestId },
+      data: {
+        status: RequestStatus.IN_PROGRESS,
+        assignedTechnicianId: request.technicalId,
+        startTime: new Date(),
+      },
+      include: {
+        equipment: true,
+        team: true,
+        technician: {
+          select: { id: true, name: true, email: true },
+        },
+        assignedTechnician: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Log the approval
+    await this.requestRepository.addEscalationLog(
+      requestId,
+      `Manager approved request. Technician can now start work.`
+    );
+
+    return {
+      request: updatedRequest,
+      message: 'Request approved successfully. Technician can now start work.',
+    };
+  }
+
+  // TECHNICIAN-SPECIFIC METHODS
+
+  async getMyRequests(technicianId: string, filters?: { status?: RequestStatus }) {
+    // Get technician's team
+    const technician = await prisma.user.findUnique({
+      where: { id: technicianId },
+      include: { team: true },
+    });
+
+    if (!technician || !technician.teamId) {
+      throw new Error('Technician not found or not assigned to a team');
+    }
+
+    return this.requestRepository.findAll({
+      teamId: technician.teamId,
+      ...filters,
+    });
+  }
+
+  async startRequest(requestId: string, technicianId: string) {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new Error('Maintenance request not found');
+    }
+
+    if (request.status !== RequestStatus.NEW) {
+      throw new Error('Only NEW requests can be started');
+    }
+
+    // Verify technician is in the request's team
+    const technician = await prisma.user.findUnique({
+      where: { id: technicianId },
+      include: { team: true },
+    });
+
+    if (!technician || technician.teamId !== request.teamId) {
+      throw new Error('You are not authorized to start this request');
+    }
+
+    // Check if equipment is unrepairable
+    if (request.equipmentId) {
+      const equipment = await this.equipmentRepository.findById(request.equipmentId);
+      if (equipment?.isUnrepairable) {
+        throw new Error('This equipment is marked as unrepairable and cannot be worked on');
+      }
+    }
+
+    // Start the request
+    const updatedRequest = await prisma.maintenanceRequest.update({
+      where: { id: requestId },
+      data: {
+        status: RequestStatus.IN_PROGRESS,
+        assignedTechnicianId: technicianId,
+        startTime: new Date(),
+      },
+      include: {
+        equipment: true,
+        team: true,
+        assignedTechnician: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Increase technician load
+    await this.requestRepository.updateTechnicianLoad(technicianId, 1);
+
+    return {
+      request: updatedRequest,
+      message: 'Request started successfully',
+    };
+  }
+
+  async updateProgress(
+    requestId: string,
+    technicianId: string,
+    data: { workNotes?: string; pauseWork?: boolean }
+  ) {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new Error('Maintenance request not found');
+    }
+
+    if (request.assignedTechnicianId !== technicianId) {
+      throw new Error('You are not assigned to this request');
+    }
+
+    if (request.status !== RequestStatus.IN_PROGRESS) {
+      throw new Error('Request is not in progress');
+    }
+
+    const updatedRequest = await prisma.maintenanceRequest.update({
+      where: { id: requestId },
+      data: {
+        workNotes: data.workNotes || request.workNotes,
+      },
+      include: {
+        equipment: true,
+        team: true,
+        assignedTechnician: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    return {
+      request: updatedRequest,
+      message: 'Progress updated successfully',
+    };
+  }
+
+  async completeRequest(
+    requestId: string,
+    technicianId: string,
+    data: {
+      hoursSpent: number;
+      rootCause: string;
+      isTemporaryFix?: boolean;
+      workNotes?: string;
+    }
+  ) {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new Error('Maintenance request not found');
+    }
+
+    if (request.assignedTechnicianId !== technicianId) {
+      throw new Error('You are not assigned to this request');
+    }
+
+    if (request.status !== RequestStatus.IN_PROGRESS) {
+      throw new Error('Request is not in progress');
+    }
+
+    const endTime = new Date();
+
+    // Update request
+    const updatedRequest = await prisma.maintenanceRequest.update({
+      where: { id: requestId },
+      data: {
+        status: RequestStatus.REPAIRED,
+        endTime,
+        completedAt: endTime,
+        hoursSpent: data.hoursSpent,
+        rootCause: data.rootCause as any,
+        isTemporaryFix: data.isTemporaryFix || false,
+        workNotes: data.workNotes || request.workNotes,
+      },
+      include: {
+        equipment: true,
+        team: true,
+        assignedTechnician: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Decrease technician load
+    await this.requestRepository.updateTechnicianLoad(technicianId, -1);
+
+    // Update equipment health score
+    if (request.equipmentId) {
+      await this.updateEquipmentHealthScore(request.equipmentId);
+    }
+
+    return {
+      request: updatedRequest,
+      message: 'Request completed successfully',
+    };
+  }
+
+  async markUnrepairable(
+    requestId: string,
+    technicianId: string,
+    data: { reason: string }
+  ) {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new Error('Maintenance request not found');
+    }
+
+    if (request.assignedTechnicianId !== technicianId) {
+      throw new Error('You are not assigned to this request');
+    }
+
+    if (request.status !== RequestStatus.IN_PROGRESS) {
+      throw new Error('Request is not in progress');
+    }
+
+    if (!request.equipmentId) {
+      throw new Error('No equipment associated with this request');
+    }
+
+    // Mark equipment as unrepairable
+    await prisma.equipment.update({
+      where: { id: request.equipmentId },
+      data: {
+        isUnrepairable: true,
+        scrapNotes: data.reason,
+        healthScore: 'RED',
+      },
+    });
+
+    // Update request status to SCRAP
+    const updatedRequest = await prisma.maintenanceRequest.update({
+      where: { id: requestId },
+      data: {
+        status: RequestStatus.SCRAP,
+        endTime: new Date(),
+        completedAt: new Date(),
+        workNotes: `MARKED AS UNREPAIRABLE: ${data.reason}`,
+      },
+      include: {
+        equipment: true,
+        team: true,
+        assignedTechnician: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Decrease technician load
+    await this.requestRepository.updateTechnicianLoad(technicianId, -1);
+
+    return {
+      request: updatedRequest,
+      message: 'Equipment marked as unrepairable. Manager will be notified for scrap decision.',
+    };
+  }
+
+  async escalateRequest(
+    requestId: string,
+    technicianId: string,
+    data: { reason: string }
+  ) {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new Error('Maintenance request not found');
+    }
+
+    if (request.assignedTechnicianId !== technicianId) {
+      throw new Error('You are not assigned to this request');
+    }
+
+    if (request.status !== RequestStatus.IN_PROGRESS) {
+      throw new Error('Request is not in progress');
+    }
+
+    // Update request status to ESCALATED
+    const updatedRequest = await prisma.maintenanceRequest.update({
+      where: { id: requestId },
+      data: {
+        status: RequestStatus.ESCALATED,
+        workNotes: `ESCALATED: ${data.reason}\n\n${request.workNotes || ''}`,
+      },
+      include: {
+        equipment: true,
+        team: true,
+        assignedTechnician: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Create escalation log
+    await prisma.escalationLog.create({
+      data: {
+        requestId,
+        reason: data.reason,
+        escalatedBy: technicianId,
+      },
+    });
+
+    return {
+      request: updatedRequest,
+      message: 'Request escalated to manager successfully',
+    };
+  }
+
+  async getMyWorkHistory(technicianId: string) {
+    return prisma.maintenanceRequest.findMany({
+      where: {
+        assignedTechnicianId: technicianId,
+        status: {
+          in: [RequestStatus.REPAIRED, RequestStatus.SCRAP],
+        },
+      },
+      include: {
+        equipment: true,
+        team: true,
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+    });
+  }
+
+  private async updateEquipmentHealthScore(equipmentId: string) {
+    // Get equipment maintenance history
+    const requests = await prisma.maintenanceRequest.findMany({
+      where: {
+        equipmentId,
+        status: {
+          in: [RequestStatus.REPAIRED, RequestStatus.SCRAP],
+        },
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+      take: 10, // Last 10 requests
+    });
+
+    if (requests.length === 0) return;
+
+    // Calculate metrics
+    const totalRequests = requests.length;
+    const temporaryFixes = requests.filter((r) => r.isTemporaryFix).length;
+    const avgHoursSpent =
+      requests.reduce((sum, r) => sum + (r.hoursSpent || 0), 0) / totalRequests;
+
+    // Simple health score logic
+    let healthScore: 'GREEN' | 'YELLOW' | 'RED' = 'GREEN';
+
+    // RED: More than 5 requests in last 10, or more than 40% temporary fixes
+    if (totalRequests > 5 || temporaryFixes / totalRequests > 0.4) {
+      healthScore = 'RED';
+    }
+    // YELLOW: 3-5 requests or 20-40% temporary fixes
+    else if (totalRequests >= 3 || temporaryFixes / totalRequests > 0.2) {
+      healthScore = 'YELLOW';
+    }
+
+    // Update equipment health score
+    await prisma.equipment.update({
+      where: { id: equipmentId },
+      data: { healthScore },
+    });
   }
 }
 
 // Need to import prisma for the reject and reassign method
 import prisma from '../../config/database';
+

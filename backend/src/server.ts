@@ -8,6 +8,7 @@ import teamRoutes from './modules/team/team.routes';
 import equipmentRoutes from './modules/equipment/equipment.routes';
 import requestRoutes from './modules/maintenance-request/maintenance-request.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import technicianRoutes from './modules/technician/technician.routes';
 import employeeRoutes from './modules/employee/employee.routes';
 import kanbanRoutes from './modules/kanban/kanban.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
@@ -33,6 +34,7 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/technician', technicianRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/kanban', kanbanRoutes);
 
