@@ -54,15 +54,16 @@ model User {
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
 
-  team                MaintenanceTeam?     @relation(fields: [teamId], references: [id])
-  technicianProfile   TechnicianProfile?
-  createdRequests     MaintenanceRequest[] @relation("CreatedByUser")
-  assignedRequests    MaintenanceRequest[] @relation("TechnicalUser")
-  assignmentsGiven    AssignmentHistory[]  @relation("AssignedByUser")
-  assignmentsReceived AssignmentHistory[]  @relation("AssignedToUser")
-  workLogs            WorkLog[]
-  refreshTokens       RefreshToken[]
-  teamMembers         TeamMember[]
+  team                 MaintenanceTeam?       @relation(fields: [teamId], references: [id])
+  technicianProfile    TechnicianProfile?
+  createdRequests      MaintenanceRequest[]   @relation("CreatedByUser")
+  assignedRequests     MaintenanceRequest[]   @relation("TechnicalUser")
+  assignmentsGiven     AssignmentHistory[]    @relation("AssignedByUser")
+  assignmentsReceived  AssignmentHistory[]    @relation("AssignedToUser")
+  workLogs             WorkLog[]
+  refreshTokens        RefreshToken[]
+  teamMembers          TeamMember[]
+  equipmentAssignments EquipmentAssignment[]
 
   @@map("users")
 }
@@ -109,6 +110,9 @@ model Equipment {
   id            String          @id @default(uuid()) @db.Uuid
   name          String          @db.VarChar(100)
   serialNumber  String          @unique @map("serial_number") @db.VarChar(100)
+  type          String?         @db.VarChar(100)
+  manufacturer  String?         @db.VarChar(100)
+  model         String?         @db.VarChar(100)
   location      String?         @db.VarChar(100)
   department    String?         @db.VarChar(100)
   primaryTeamId String?         @map("primary_team_id") @db.Uuid
@@ -116,13 +120,30 @@ model Equipment {
   warrantyEnd   DateTime?       @map("warranty_end") @db.Date
   status        EquipmentStatus @default(ACTIVE)
   createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
 
-  primaryTeam         MaintenanceTeam?     @relation(fields: [primaryTeamId], references: [id])
-  maintenanceRequests MaintenanceRequest[]
-  equipmentHealth     EquipmentHealth?
-  equipmentHistory    EquipmentHistory[]
+  primaryTeam          MaintenanceTeam?       @relation(fields: [primaryTeamId], references: [id])
+  maintenanceRequests  MaintenanceRequest[]
+  equipmentHealth      EquipmentHealth?
+  equipmentHistory     EquipmentHistory[]
+  equipmentAssignments EquipmentAssignment[]
 
   @@map("equipment")
+}
+
+model EquipmentAssignment {
+  id          String    @id @default(uuid()) @db.Uuid
+  equipmentId String    @map("equipment_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  assignedAt  DateTime  @default(now()) @map("assigned_at") @db.Timestamp()
+  returnedAt  DateTime? @map("returned_at") @db.Timestamp()
+  notes       String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("equipment_assignment")
 }
 
 model MaintenanceRequest {
@@ -226,4 +247,16 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_token")
+}
+
+model PasswordResetOTP {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @db.VarChar(150)
+  otp       String   @db.VarChar(6)
+  expiresAt DateTime @map("expires_at") @db.Timestamp()
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  @@index([email, otp])
+  @@map("password_reset_otp")
 }

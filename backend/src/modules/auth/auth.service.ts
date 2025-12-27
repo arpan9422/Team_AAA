@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../../config';
 import { AuthRepository } from './auth.repository';
 import { RegisterInput, LoginInput } from './auth.validation';
+import emailService from '../../shared/services/email.service';
 
 export class AuthService {
   private authRepository: AuthRepository;
@@ -122,5 +123,66 @@ export class AuthService {
       throw new Error('User not found');
     }
     return user;
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.authRepository.findUserByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return { message: 'If the email exists, an OTP has been sent' };
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // OTP expires in 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Save OTP to database
+    await this.authRepository.createPasswordResetOTP(email, otp, expiresAt);
+
+    // Send email with OTP
+    await emailService.sendPasswordResetOTP(email, otp, user.name);
+
+    return { message: 'If the email exists, an OTP has been sent' };
+  }
+
+  async verifyOTP(email: string, otp: string) {
+    const otpRecord = await this.authRepository.findValidOTP(email, otp);
+    
+    if (!otpRecord) {
+      throw new Error('Invalid or expired OTP');
+    }
+
+    // Mark OTP as verified
+    await this.authRepository.markOTPAsVerified(otpRecord.id);
+
+    return { message: 'OTP verified successfully. You can now reset your password.' };
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    // Find the OTP record
+    const otpRecord = await this.authRepository.findVerifiedOTP(email, otp);
+    
+    if (!otpRecord) {
+      throw new Error('Invalid or expired OTP. Please verify OTP first.');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await this.authRepository.updatePassword(email, hashedPassword);
+
+    // Delete the used OTP
+    await this.authRepository.deleteOTP(otpRecord.id);
+
+    // Send confirmation email
+    const user = await this.authRepository.findUserByEmail(email);
+    if (user) {
+      await emailService.sendPasswordResetConfirmation(email, user.name);
+    }
+
+    return { message: 'Password reset successfully' };
   }
 }
