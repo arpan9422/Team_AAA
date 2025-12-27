@@ -21,9 +21,16 @@ export class TeamController {
     }
   };
 
-  getTeamById = async (req: AuthRequest, res: Response) => {
+ 
+    getTeamById = async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
+      
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: 'Invalid Team ID format. Must be a valid UUID.' });
+      }
+
       const team = await this.teamService.getTeamById(id);
       return res.status(200).json({ team });
     } catch (error: any) {
@@ -46,9 +53,16 @@ export class TeamController {
     }
   };
 
-  updateTeam = async (req: AuthRequest, res: Response) => {
+
+    updateTeam = async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: 'Invalid Team ID format. Must be a valid UUID.' });
+      }
+
       const data: UpdateTeamInput = req.body;
       const team = await this.teamService.updateTeam(id, data);
       return res.status(200).json({ message: 'Team updated successfully', team });
@@ -61,9 +75,16 @@ export class TeamController {
     }
   };
 
-  deleteTeam = async (req: AuthRequest, res: Response) => {
+
+    deleteTeam = async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: 'Invalid Team ID format. Must be a valid UUID.' });
+      }
+
       await this.teamService.deleteTeam(id);
       return res.status(200).json({ message: 'Team deactivated successfully' });
     } catch (error: any) {
@@ -81,6 +102,12 @@ export class TeamController {
   addTeamMember = async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
+      
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: 'Invalid Team ID format. Must be a valid UUID.' });
+      }
+
       const { userId }: AddTeamMemberInput = req.body;
       const member = await this.teamService.addTeamMember(id, userId);
       return res.status(201).json({ message: 'Member added successfully', member });
@@ -96,9 +123,16 @@ export class TeamController {
     }
   };
 
-  removeTeamMember = async (req: AuthRequest, res: Response) => {
+
+    removeTeamMember = async (req: AuthRequest, res: Response) => {
     try {
       const { id, userId } = req.params;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id) || !uuidRegex.test(userId)) {
+        return res.status(400).json({ error: 'Invalid ID format. Must be a valid UUID.' });
+      }
+
       await this.teamService.removeTeamMember(id, userId);
       return res.status(200).json({ message: 'Member removed successfully' });
     } catch (error: any) {
@@ -113,9 +147,15 @@ export class TeamController {
     }
   };
 
-  getTeamMembers = async (req: AuthRequest, res: Response) => {
+    getTeamMembers = async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: 'Invalid Team ID format. Must be a valid UUID.' });
+      }
+
       const members = await this.teamService.getTeamMembers(id);
       return res.status(200).json({ members });
     } catch (error: any) {
