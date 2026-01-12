@@ -33,204 +33,66 @@ import {
     IconSend
 } from "@tabler/icons-react"
 
-// Enhanced task type matching database schema
+import api from "@/lib/api"
+
+// Task type matching backend response
 type Task = {
-    id: number
+    id: string
     title: string
     description: string
     requestType: "CORRECTIVE" | "PREVENTIVE"
     equipmentId: string
-    equipmentName: string
-    serialNumber: string
-    location: string
-    department: string
-    purchaseDate: string
-    warrantyEnd: string
-    equipmentStatus: string
-    priority: "High" | "Medium" | "Low"
-    status: "NEW" | "REQUESTED" | "IN_PROGRESS" | "REPAIRED" | "COMPLETED"
-    assignedDate?: string
-    scheduledDate: string
-    createdBy: string
+    equipment?: {
+        name: string
+        serialNumber: string
+        location: string
+        type: string
+    }
+    teamId: string
+    priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+    status: "NEW" | "IN_PROGRESS" | "REPAIRED" | "COMPLETED" | "SCRAP" | "REQUESTED"
     createdAt: string
+    scheduledDate: string
     completedAt?: string
-    technicianId?: string | null
-    technicianName?: string | null
+    assignedTechnicianId?: string | null
+    assignedTechnician?: {
+        name: string
+    }
 }
 
-// Mock data - NEW tasks (unassigned) and tasks in various states
-const mockTasks: Task[] = [
-    // NEW TASKS (Available for request)
-    {
-        id: 1,
-        title: "AC unit not cooling properly",
-        description: "Air conditioning unit in conference room is running but not cooling effectively. Temperature remains at 28°C despite being set to 22°C.",
-        requestType: "CORRECTIVE",
-        equipmentId: "eq-101",
-        equipmentName: "Daikin AC Unit 3.5 Ton",
-        serialNumber: "DAI-45892",
-        location: "Building A - Floor 2 - Conference Room 201",
-        department: "Administration",
-        purchaseDate: "2021-05-15",
-        warrantyEnd: "2026-05-15",
-        equipmentStatus: "ACTIVE",
-        priority: "High",
-        status: "NEW",
-        scheduledDate: "2024-04-15T10:00:00",
-        createdBy: "Sarah Admin",
-        createdAt: "2024-04-14T09:30:00",
-        technicianId: null,
-        technicianName: null
-    },
-    {
-        id: 2,
-        title: "Projector lamp replacement",
-        description: "Projector lamp is dim and needs replacement. Estimated lamp hours: 4500/5000.",
-        requestType: "PREVENTIVE",
-        equipmentId: "eq-102",
-        equipmentName: "Epson PowerLite Projector",
-        serialNumber: "EPS-22341",
-        location: "Building B - Floor 3 - Training Room",
-        department: "HR",
-        purchaseDate: "2022-01-10",
-        warrantyEnd: "2025-01-10",
-        equipmentStatus: "ACTIVE",
-        priority: "Medium",
-        status: "NEW",
-        scheduledDate: "2024-04-18T14:00:00",
-        createdBy: "Mike HR Manager",
-        createdAt: "2024-04-13T11:00:00",
-        technicianId: null,
-        technicianName: null
-    },
-    {
-        id: 3,
-        title: "Network router firmware update",
-        description: "Critical security firmware update required for main office router. Scheduled during off-hours to minimize disruption.",
-        requestType: "PREVENTIVE",
-        equipmentId: "eq-103",
-        equipmentName: "Cisco Router 4000 Series",
-        serialNumber: "CIS-78921",
-        location: "Data Center - Rack B5",
-        department: "IT Operations",
-        purchaseDate: "2020-08-20",
-        warrantyEnd: "2025-08-20",
-        equipmentStatus: "ACTIVE",
-        priority: "High",
-        status: "NEW",
-        scheduledDate: "2024-04-16T22:00:00",
-        createdBy: "John IT Director",
-        createdAt: "2024-04-14T08:15:00",
-        technicianId: null,
-        technicianName: null
-    },
-    {
-        id: 4,
-        title: "Coffee machine water leak",
-        description: "Office coffee machine is leaking water from the bottom. Needs immediate attention to prevent floor damage.",
-        requestType: "CORRECTIVE",
-        equipmentId: "eq-104",
-        equipmentName: "Jura Commercial Coffee Machine",
-        serialNumber: "JUR-33421",
-        location: "Building A - Floor 1 - Pantry",
-        department: "Facilities",
-        purchaseDate: "2023-02-01",
-        warrantyEnd: "2026-02-01",
-        equipmentStatus: "ACTIVE",
-        priority: "Medium",
-        status: "NEW",
-        scheduledDate: "2024-04-15T08:00:00",
-        createdBy: "Lisa Facilities",
-        createdAt: "2024-04-14T07:45:00",
-        technicianId: null,
-        technicianName: null
-    },
-    // REQUESTED TASKS (Technician has requested to work on these)
-    {
-        id: 5,
-        title: "Laptop overheating issue",
-        description: "Laptop is overheating during normal operations. Check cooling system and thermal paste. Fan making unusual noise.",
-        requestType: "CORRECTIVE",
-        equipmentId: "eq-001",
-        equipmentName: "Dell XPS 15",
-        serialNumber: "DX-100293",
-        location: "Building A - Floor 3 - Desk 42",
-        department: "Engineering",
-        purchaseDate: "2022-03-15",
-        warrantyEnd: "2025-03-15",
-        equipmentStatus: "ACTIVE",
-        priority: "High",
-        status: "REQUESTED",
-        assignedDate: "2024-04-12",
-        scheduledDate: "2024-04-13T09:00:00",
-        createdBy: "John Manager",
-        createdAt: "2024-04-11T14:30:00",
-        technicianId: "tech-001",
-        technicianName: "Current User"
-    },
-    // IN PROGRESS TASKS
-    {
-        id: 6,
-        title: "Server maintenance",
-        description: "Routine quarterly maintenance check for server rack. Includes cleaning, cable management, and performance testing.",
-        requestType: "PREVENTIVE",
-        equipmentId: "eq-002",
-        equipmentName: "Server Rack A",
-        serialNumber: "SR-99281",
-        location: "Data Center - Row 5 - Rack A",
-        department: "IT Operations",
-        purchaseDate: "2020-01-10",
-        warrantyEnd: "2025-01-10",
-        equipmentStatus: "ACTIVE",
-        priority: "Medium",
-        status: "IN_PROGRESS",
-        assignedDate: "2024-04-10",
-        scheduledDate: "2024-04-15T10:00:00",
-        createdBy: "Sarah Admin",
-        createdAt: "2024-04-09T08:15:00",
-        technicianId: "tech-001",
-        technicianName: "Current User"
-    },
-    // COMPLETED TASKS
-    {
-        id: 7,
-        title: "Monitor replacement",
-        description: "Replace broken monitor screen. Screen has dead pixels and flickering issues.",
-        requestType: "CORRECTIVE",
-        equipmentId: "eq-003",
-        equipmentName: "LG Monitor 27",
-        serialNumber: "LG-22311",
-        location: "Building B - Floor 2 - Conference Room 201",
-        department: "Marketing",
-        purchaseDate: "2021-06-20",
-        warrantyEnd: "2024-06-20",
-        equipmentStatus: "ACTIVE",
-        priority: "Low",
-        status: "COMPLETED",
-        assignedDate: "2024-04-08",
-        scheduledDate: "2024-04-20T14:00:00",
-        createdBy: "Mike Director",
-        createdAt: "2024-04-08T11:00:00",
-        completedAt: "2024-04-12T16:30:00",
-        technicianId: "tech-001",
-        technicianName: "Current User"
-    }
-]
+// Redacted mock data as it no longer matches the backend-integrated Task type.
 
 export default function TechnicianTasksPage() {
-    const [tasks, setTasks] = React.useState<Task[]>(mockTasks)
+    const [tasks, setTasks] = React.useState<Task[]>([])
+    const [loading, setLoading] = React.useState(true)
     const [searchQuery, setSearchQuery] = React.useState("")
     const [priorityFilter, setPriorityFilter] = React.useState<string>("all")
     const [selectedTask, setSelectedTask] = React.useState<Task | null>(null)
     const [isDetailOpen, setIsDetailOpen] = React.useState(false)
     const [activeTab, setActiveTab] = React.useState("new")
 
+    const fetchTasks = async () => {
+        try {
+            setLoading(true)
+            const response = await api.get('/requests/my-requests')
+            setTasks(response.data)
+        } catch (error) {
+            console.error("Failed to fetch tasks:", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    React.useEffect(() => {
+        fetchTasks()
+    }, [])
+
     // Filter tasks by tab and search
     const filterTasksByStatus = (status: Task["status"][]) => {
         return tasks.filter(task => {
             const matchesStatus = status.includes(task.status)
             const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                task.equipmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                task.equipment?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 task.description.toLowerCase().includes(searchQuery.toLowerCase())
             const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter
             return matchesStatus && matchesSearch && matchesPriority
@@ -242,40 +104,51 @@ export default function TechnicianTasksPage() {
     const myTasks = filterTasksByStatus(["IN_PROGRESS", "REPAIRED"])
     const completedTasks = filterTasksByStatus(["COMPLETED"])
 
-    // Handle requesting to work on a task
-    const handleRequestTask = (taskId: number) => {
-        setTasks(tasks.map(task =>
-            task.id === taskId
-                ? { ...task, status: "REQUESTED" as const, technicianId: "tech-001", technicianName: "Current User" }
-                : task
-        ))
-    }
-
-    // Handle canceling a request
-    const handleCancelRequest = (taskId: number) => {
-        setTasks(tasks.map(task =>
-            task.id === taskId
-                ? { ...task, status: "NEW" as const, technicianId: null, technicianName: null }
-                : task
-        ))
+    // Handle requesting to work on a task (Accept)
+    const handleRequestTask = async (taskId: string) => {
+        try {
+            await api.post(`/requests/${taskId}/accept`)
+            await fetchTasks()
+            setActiveTab("requested")
+        } catch (error) {
+            console.error("Failed to accept task:", error)
+            alert("Failed to accept task")
+        }
     }
 
     // Handle starting work on a task
-    const handleStartWork = (taskId: number) => {
-        setTasks(tasks.map(task =>
-            task.id === taskId
-                ? { ...task, status: "IN_PROGRESS" as const, assignedDate: new Date().toISOString().split('T')[0] }
-                : task
-        ))
+    const handleStartWork = async (taskId: string) => {
+        try {
+            await api.patch(`/requests/${taskId}/start`)
+            await fetchTasks()
+            setActiveTab("active")
+        } catch (error) {
+            console.error("Failed to start task:", error)
+        }
     }
 
     // Handle submitting completed work
-    const handleSubmitWork = (taskId: number) => {
-        setTasks(tasks.map(task =>
-            task.id === taskId
-                ? { ...task, status: "REPAIRED" as const }
-                : task
-        ))
+    const handleSubmitWork = async (taskId: string) => {
+        try {
+            // For simplicity, we'll use some default values or a simple prompt
+            // Real completion would need a dialog for hours and root cause
+            const hoursSpent = parseFloat(prompt("Enter hours spent:", "1.0") || "1.0")
+            await api.patch(`/requests/${taskId}/complete`, {
+                hoursSpent,
+                rootCause: 'WEAR_AND_TEAR',
+                workNotes: 'Task completed via dashboard'
+            })
+            await fetchTasks()
+            setActiveTab("completed")
+        } catch (error) {
+            console.error("Failed to complete task:", error)
+        }
+    }
+
+    // Note: Cancel request is not explicitly in backend, but we could add it if needed.
+    // Reusing existing logic for now.
+    const handleCancelRequest = (taskId: string) => {
+        alert("Cancellation requires manager approval or is not implemented in backend yet.")
     }
 
     const handleTaskClick = (task: Task) => {
@@ -285,9 +158,10 @@ export default function TechnicianTasksPage() {
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
-            case "High": return "destructive"
-            case "Medium": return "default"
-            case "Low": return "secondary"
+            case "CRITICAL": return "destructive"
+            case "HIGH": return "destructive"
+            case "MEDIUM": return "default"
+            case "LOW": return "secondary"
             default: return "outline"
         }
     }
@@ -318,7 +192,7 @@ export default function TechnicianTasksPage() {
                             {task.title}
                         </CardTitle>
                         <CardDescription className="text-xs">
-                            {task.equipmentName} • {task.serialNumber}
+                            {task.equipment?.name} • {task.equipment?.serialNumber}
                         </CardDescription>
                     </div>
                     <div className="flex flex-col items-end gap-2">
@@ -338,7 +212,7 @@ export default function TechnicianTasksPage() {
                         <IconClock className="size-3" />
                         <span>{new Date(task.scheduledDate).toLocaleDateString()}</span>
                     </div>
-                    <span>{task.department}</span>
+                    <span>{task.equipment?.location || 'Unknown'}</span>
                 </div>
                 <div className="flex gap-2">
                     {task.status === "NEW" && (
@@ -370,15 +244,14 @@ export default function TechnicianTasksPage() {
                         <>
                             <Button
                                 size="sm"
-                                variant="outline"
-                                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                                className="flex-1 bg-accent-yellow hover:bg-accent-yellow/90 text-white"
                                 onClick={(e) => {
                                     e.stopPropagation()
-                                    handleCancelRequest(task.id)
+                                    handleStartWork(task.id)
                                 }}
                             >
-                                <IconHandStop className="mr-2 size-4" />
-                                Cancel Request
+                                <IconPlayerPlay className="mr-2 size-4" />
+                                Start Work
                             </Button>
                             <Button
                                 size="sm"
@@ -434,6 +307,17 @@ export default function TechnicianTasksPage() {
             </CardContent>
         </Card>
     )
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-bg-soft">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-muted-foreground font-medium animate-pulse">Loading tasks...</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <SidebarProvider

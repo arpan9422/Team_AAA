@@ -17,7 +17,22 @@ export class TechnicianService {
     }
 
     if (!technician.teamId) {
-      throw new Error('Technician not assigned to any team');
+      return {
+        technician: {
+          id: technician.id,
+          name: technician.name,
+          email: technician.email,
+          team: null,
+          profile: technician.technicianProfile,
+        },
+        stats: {
+          activeJobs: 0,
+          pendingJobs: 0,
+          completedThisMonth: 0,
+          overdueJobs: 0,
+        },
+        recentCompletedJobs: [],
+      };
     }
 
     // Get active jobs count (IN_PROGRESS)
@@ -139,8 +154,8 @@ export class TechnicianService {
     const avgHoursSpent =
       completedRequests > 0
         ? maintenanceHistory
-            .filter((r) => r.hoursSpent)
-            .reduce((sum, r) => sum + (r.hoursSpent || 0), 0) / completedRequests
+          .filter((r) => r.hoursSpent)
+          .reduce((sum, r) => sum + (r.hoursSpent || 0), 0) / completedRequests
         : 0;
 
     // Check if under warranty

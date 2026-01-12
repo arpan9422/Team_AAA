@@ -372,8 +372,12 @@ export class MaintenanceRequestService {
       include: { team: true },
     });
 
-    if (!technician || !technician.teamId) {
-      throw new Error('Technician not found or not assigned to a team');
+    if (!technician) {
+      throw new Error('Technician not found');
+    }
+
+    if (!technician.teamId) {
+      return [];
     }
 
     return this.requestRepository.findAll({

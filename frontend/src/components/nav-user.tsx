@@ -29,6 +29,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
+import { useRouter } from "next/navigation"
+import api from "@/lib/api"
+
 export function NavUser({
   user,
 }: {
@@ -39,6 +42,25 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      // Optional: Call logout endpoint if we have a refresh token
+      const refreshToken = localStorage.getItem("refreshToken")
+      if (refreshToken) {
+        await api.post("/auth/logout", { refreshToken })
+      }
+    } catch (error) {
+      console.error("Logout error:", error)
+    } finally {
+      // Always clear local storage and redirect
+      localStorage.removeItem("token")
+      localStorage.removeItem("refreshToken")
+      localStorage.removeItem("user")
+      router.push("/login")
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -88,14 +110,13 @@ export function NavUser({
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
-
               <DropdownMenuItem>
                 <IconNotification />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 cursor-pointer">
               <IconLogout />
               Log out
             </DropdownMenuItem>
